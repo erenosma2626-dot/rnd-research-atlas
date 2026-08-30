@@ -38,12 +38,14 @@ import { useTheme } from '../theme/ThemeContext';
 
 interface CanvasPageProps {
   canvasId: string;
+  projectId?: string;
   onNavigateHome: () => void;
   onSelectDocument: (documentId: string) => void;
 }
 
 const CanvasContent: React.FC<CanvasPageProps> = ({
   canvasId: initialCanvasId,
+  projectId = DEFAULT_PROJECT_ID,
   onNavigateHome,
   onSelectDocument,
 }) => {
@@ -131,6 +133,8 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
               status: item.document_status || 'done',
               documentId: item.ref_id || undefined,
               itemId: item.id,
+              added_by: item.added_by,
+              is_own: item.is_own ?? true,
               onOpenReport: onSelectDocument,
               onDeleteItem: handleDeleteItem,
             },
@@ -508,6 +512,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         isOpen={isInventoryOpen}
         onClose={() => setIsInventoryOpen(false)}
         activeCanvasId={activeCanvasId}
+        projectId={projectId}
         onAddDocumentToCanvas={(doc) => {
           handleAddDocumentToCanvas({
             id: doc.id,

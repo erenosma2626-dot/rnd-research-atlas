@@ -170,6 +170,7 @@ function AuthenticatedApp() {
       {currentView === 'canvas' && activeCanvasId && (
         <CanvasPage
           canvasId={activeCanvasId}
+          projectId={activeProjectId}
           onNavigateHome={handleNavigateHome}
           onSelectDocument={handleSelectDocument}
         />

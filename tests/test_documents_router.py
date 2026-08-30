@@ -219,6 +219,7 @@ def test_get_project_inventory_endpoint(mock_db_session):
     project_id = uuid4()
     doc_id = uuid4()
     canvas_id = uuid4()
+    user_id = uuid4()
 
     mock_inventory_items = [
         {
@@ -226,6 +227,13 @@ def test_get_project_inventory_endpoint(mock_db_session):
             "original_filename": "paper_inventory.pdf",
             "storage_path": "s3://documents/paper.pdf",
             "uploaded_at": datetime.now(timezone.utc),
+            "added_at": datetime.now(timezone.utc),
+            "added_by": {
+                "id": user_id,
+                "display_name": "ArGe Uzmanı",
+                "email": "arge@lab.io",
+            },
+            "is_own": True,
             "processing_status": "done",
             "used_in_canvases": [
                 {"canvas_id": canvas_id, "canvas_name": "Ana Canvas"}
@@ -242,7 +250,42 @@ def test_get_project_inventory_endpoint(mock_db_session):
         assert len(data) == 1
         assert data[0]["id"] == str(doc_id)
         assert data[0]["original_filename"] == "paper_inventory.pdf"
+        assert data[0]["added_by"]["display_name"] == "ArGe Uzmanı"
+        assert data[0]["is_own"] is True
         assert len(data[0]["used_in_canvases"]) == 1
         assert data[0]["used_in_canvases"][0]["canvas_name"] == "Ana Canvas"
+
+    app.dependency_overrides.pop(get_async_db, None)
+
+
+def test_add_existing_document_to_project_endpoint(mock_db_session):
+    """POST /projects/{project_id}/documents mevcut dokümanı bağlama testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    project_id = uuid4()
+    doc_id = uuid4()
+    mock_doc = Document(
+        id=doc_id,
+        original_filename="reusable_paper.pdf",
+        storage_path="s3://documents/reusable.pdf",
+        uploaded_at=datetime.now(timezone.utc),
+        processing_status="done",
+        deleted_at=None,
+    )
+
+    with patch("app.routers.documents.DocumentRepository.get_by_id", new_callable=AsyncMock) as mock_get_doc, \
+         patch("app.routers.documents.DocumentRepository.add_to_project", new_callable=AsyncMock) as mock_add:
+        mock_get_doc.return_value = mock_doc
+        mock_add.return_value = None
+
+        response = client.post(
+            f"/projects/{project_id}/documents",
+            json={"document_id": str(doc_id)},
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["status"] == "added"
+        assert data["document_id"] == str(doc_id)
+        assert data["original_filename"] == "reusable_paper.pdf"
 
     app.dependency_overrides.pop(get_async_db, None)

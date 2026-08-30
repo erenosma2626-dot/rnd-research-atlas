@@ -28,13 +28,26 @@ class CanvasUsage(BaseModel):
     canvas_name: str
 
 
+class UserSummary(BaseModel):
+    id: UUID
+    display_name: str
+    email: str
+
+
 class InventoryItemResponse(BaseModel):
     id: UUID
     original_filename: str
     storage_path: str
     uploaded_at: datetime
+    added_at: datetime
+    added_by: UserSummary
+    is_own: bool = True
     processing_status: str
     used_in_canvases: list[CanvasUsage] = []
+
+
+class AddExistingDocumentRequest(BaseModel):
+    document_id: UUID = Field(..., description="Projeye eklenecek doküman kimliği")
 
 
 class DocumentListItem(BaseModel):
@@ -240,15 +253,22 @@ async def get_project_inventory(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[InventoryItemResponse]:
-    """Proje doküman envanteri ve canvas kullanım durumunu döner."""
+    """Proje doküman envanteri, ekleyen kişi ve canvas kullanım durumunu döner."""
     inv_repo = InventoryRepository(db)
-    items = await inv_repo.get_project_inventory(project_id)
+    items = await inv_repo.get_project_inventory(project_id, current_user_id=current_user.id)
     return [
         InventoryItemResponse(
             id=item["id"],
             original_filename=item["original_filename"],
             storage_path=item["storage_path"],
             uploaded_at=item["uploaded_at"],
+            added_at=item.get("added_at", item["uploaded_at"]),
+            added_by=UserSummary(
+                id=item["added_by"]["id"],
+                display_name=item["added_by"]["display_name"],
+                email=item["added_by"]["email"],
+            ),
+            is_own=item.get("is_own", True),
             processing_status=item["processing_status"],
             used_in_canvases=[
                 CanvasUsage(canvas_id=u["canvas_id"], canvas_name=u["canvas_name"])
@@ -257,6 +277,46 @@ async def get_project_inventory(
         )
         for item in items
     ]
+
+
+@router.post(
+    "/projects/{project_id}/documents",
+    response_model=dict[str, Any],
+    status_code=status.HTTP_201_CREATED,
+    summary="Mevcut bir dokümanı projeye bağla (Kopyalamadan ilişkilendir)",
+)
+async def add_existing_document_to_project(
+    project_id: UUID,
+    request: AddExistingDocumentRequest,
+    _: ProjectMember = Depends(require_role("editor")),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, Any]:
+    """Mevcut bir dokümanı projeye ekler ve ekleyen kişiyi current_user olarak kaydeder."""
+    doc_repo = DocumentRepository(db)
+    doc = await doc_repo.get_by_id(request.document_id)
+    if not doc or doc.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Doküman bulunamadı.",
+        )
+
+    try:
+        await doc_repo.add_to_project(
+            project_id=project_id,
+            document_id=request.document_id,
+            added_by=current_user.id,
+        )
+    except Exception as e:
+        # Zaten ekliyse de başarılı say
+        pass
+
+    return {
+        "status": "added",
+        "project_id": str(project_id),
+        "document_id": str(request.document_id),
+        "original_filename": doc.original_filename,
+    }
 
 
 @router.get(

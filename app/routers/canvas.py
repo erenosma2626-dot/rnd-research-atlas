@@ -4,12 +4,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.auth.permissions import require_role
 from app.db.base import get_async_db
-from app.db.models import ProjectMember, User
+from app.db.models import ProjectDocument, ProjectMember, User
 from app.db.repository import CanvasItemRepository, CanvasRepository, DocumentRepository
 
 router = APIRouter(tags=["Canvas (Workspace)"])
@@ -41,6 +42,12 @@ class UpdateCanvasItemRequest(BaseModel):
     content: Optional[dict[str, Any]] = Field(default=None, description="Güncellenen içerik")
 
 
+class UserSummary(BaseModel):
+    id: UUID
+    display_name: str
+    email: str
+
+
 class CanvasItemResponse(BaseModel):
     id: UUID
     canvas_id: UUID
@@ -52,6 +59,8 @@ class CanvasItemResponse(BaseModel):
     # Ekstra yardımcı doküman metadata'sı
     document_title: Optional[str] = None
     document_status: Optional[str] = None
+    added_by: Optional[UserSummary] = None
+    is_own: Optional[bool] = None
 
 
 @router.post(
@@ -182,11 +191,37 @@ async def get_canvas_items(
     for it in items:
         doc_title = None
         doc_status = None
+        added_by_info = None
+        is_own = None
+
         if it.item_type == "document_box" and it.ref_id:
             doc = await doc_repo.get_by_id(it.ref_id)
             if doc:
                 doc_title = doc.original_filename
                 doc_status = doc.processing_status
+
+            # Proje-doküman ilişkisinden ekleyen kullanıcı bilgisini bul
+            try:
+                proj_doc_stmt = (
+                    select(ProjectDocument, User)
+                    .join(User, User.id == ProjectDocument.added_by)
+                    .where(
+                        ProjectDocument.project_id == canvas.project_id,
+                        ProjectDocument.document_id == it.ref_id,
+                    )
+                )
+                proj_doc_res = await db.execute(proj_doc_stmt)
+                proj_doc_row = proj_doc_res.first()
+                if proj_doc_row:
+                    p_doc, u = proj_doc_row
+                    added_by_info = UserSummary(
+                        id=u.id,
+                        display_name=u.display_name or u.email.split("@")[0],
+                        email=u.email,
+                    )
+                    is_own = bool(u.id == current_user.id)
+            except Exception:
+                pass
 
         results.append(
             CanvasItemResponse(
@@ -199,6 +234,8 @@ async def get_canvas_items(
                 content=it.content,
                 document_title=doc_title,
                 document_status=doc_status,
+                added_by=added_by_info,
+                is_own=is_own,
             )
         )
 

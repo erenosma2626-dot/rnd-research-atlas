@@ -353,22 +353,34 @@ class InventoryRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_project_inventory(self, project_id: UUID) -> list[dict[str, Any]]:
-        """Projedeki tüm dokümanları ve hangi aktif canvas'larda yer aldıklarını döner."""
-        # 1. Projedeki silinmemiş dokümanları al
+    async def get_project_inventory(
+        self,
+        project_id: UUID,
+        current_user_id: Optional[UUID] = None,
+    ) -> list[dict[str, Any]]:
+        """Projedeki tüm dokümanları, ekleyen kullanıcı detaylarını ve aktif canvas kullanım durumunu döner."""
+        # 1. Projedeki silinmemiş dokümanları ve ekleyen kullanıcı bilgilerini al
         doc_stmt = (
-            select(Document)
+            select(
+                Document,
+                ProjectDocument.added_at,
+                ProjectDocument.added_by,
+                User.id.label("contributor_id"),
+                User.display_name.label("contributor_name"),
+                User.email.label("contributor_email"),
+            )
             .join(ProjectDocument, ProjectDocument.document_id == Document.id)
+            .outerjoin(User, User.id == ProjectDocument.added_by)
             .where(ProjectDocument.project_id == project_id, Document.deleted_at.is_(None))
             .order_by(Document.uploaded_at.desc())
         )
         doc_res = await self.session.execute(doc_stmt)
-        docs = list(doc_res.scalars().all())
+        doc_rows = doc_res.all()
 
-        if not docs:
+        if not doc_rows:
             return []
 
-        doc_ids = [d.id for d in docs]
+        doc_ids = [row[0].id for row in doc_rows]
 
         # 2. Bu dokümanların yer aldığı aktif canvas'ları bul
         usage_stmt = (
@@ -388,7 +400,7 @@ class InventoryRepository:
         usage_res = await self.session.execute(usage_stmt)
         usage_rows = usage_res.all()
 
-        usage_map: dict[UUID, list[dict[str, Any]]] = {d.id: [] for d in docs}
+        usage_map: dict[UUID, list[dict[str, Any]]] = {d_id: [] for d_id in doc_ids}
         for ref_id, canvas_id, canvas_name in usage_rows:
             if ref_id and ref_id in usage_map:
                 usage_map[ref_id].append({
@@ -398,14 +410,24 @@ class InventoryRepository:
 
         # 3. Sonuç listesini birleştir
         results: list[dict[str, Any]] = []
-        for d in docs:
+        for doc, added_at, added_by, u_id, u_name, u_email in doc_rows:
+            is_own = bool(current_user_id and added_by == current_user_id)
+            contributor_info = {
+                "id": u_id or added_by,
+                "display_name": u_name or (u_email.split("@")[0] if u_email else "Bilinmeyen"),
+                "email": u_email or "user@system.local",
+            }
+
             results.append({
-                "id": d.id,
-                "original_filename": d.original_filename,
-                "storage_path": d.storage_path,
-                "processing_status": d.processing_status,
-                "uploaded_at": d.uploaded_at,
-                "used_in_canvases": usage_map.get(d.id, []),
+                "id": doc.id,
+                "original_filename": doc.original_filename,
+                "storage_path": doc.storage_path,
+                "processing_status": doc.processing_status,
+                "uploaded_at": doc.uploaded_at,
+                "added_at": added_at or doc.uploaded_at,
+                "added_by": contributor_info,
+                "is_own": is_own,
+                "used_in_canvases": usage_map.get(doc.id, []),
             })
 
         return results

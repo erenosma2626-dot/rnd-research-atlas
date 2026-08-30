@@ -166,11 +166,20 @@ export interface CanvasUsage {
   canvas_name: string;
 }
 
+export interface UserSummary {
+  id: string;
+  display_name: string;
+  email: string;
+}
+
 export interface InventoryItem {
   id: string;
   original_filename: string;
   storage_path: string;
   uploaded_at: string;
+  added_at: string;
+  added_by: UserSummary;
+  is_own: boolean;
   processing_status: 'pending' | 'processing' | 'done' | 'failed';
   used_in_canvases: CanvasUsage[];
 }
@@ -227,6 +236,8 @@ export interface CanvasItemData {
   content?: Record<string, any> | null;
   document_title?: string | null;
   document_status?: string | null;
+  added_by?: UserSummary | null;
+  is_own?: boolean | null;
 }
 
 // 1. Asenkron Doküman Yükleme
@@ -613,4 +624,21 @@ export async function removeProjectMember(projectId: string, userId: string): Pr
   if (!res.ok) {
     throw new Error('Üye projeden çıkarılamadı');
   }
+}
+
+// 23. Mevcut Dokümanı Başka Projeye Ekleme
+export async function addExistingDocumentToProject(
+  projectId: string,
+  documentId: string
+): Promise<{ status: string; project_id: string; document_id: string; original_filename: string }> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/documents`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ document_id: documentId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Doküman projeye eklenemedi' }));
+    throw new Error(err.detail || 'Doküman projeye eklenemedi');
+  }
+  return res.json();
 }

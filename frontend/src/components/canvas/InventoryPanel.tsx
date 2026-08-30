@@ -6,6 +6,7 @@ interface InventoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   activeCanvasId: string;
+  projectId?: string;
   onAddDocumentToCanvas: (doc: { id: string; original_filename: string; processing_status: string }) => void;
 }
 
@@ -13,6 +14,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
   isOpen,
   onClose,
   activeCanvasId,
+  projectId,
   onAddDocumentToCanvas,
 }) => {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -22,7 +24,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const data = await getProjectInventory();
+      const data = await getProjectInventory(projectId);
       setItems(data);
     } catch {
       setItems([]);
@@ -113,6 +115,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
               key={item.id}
               item={item}
               activeCanvasId={activeCanvasId}
+              currentProjectId={projectId}
               onAddDirectly={(doc) => {
                 onAddDocumentToCanvas({
                   id: doc.id,

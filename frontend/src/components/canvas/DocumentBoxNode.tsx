@@ -1,5 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
+import { UserSummary } from '../../api/client';
 import { ProcessingStatusBadge } from '../ProcessingStatusBadge';
 
 export interface DocumentBoxNodeData {
@@ -7,6 +8,8 @@ export interface DocumentBoxNodeData {
   status: string;
   documentId?: string;
   itemId: string;
+  added_by?: UserSummary | null;
+  is_own?: boolean;
   onOpenReport?: (documentId: string) => void;
   onDeleteItem?: (itemId: string) => void;
 }
@@ -14,15 +17,21 @@ export interface DocumentBoxNodeData {
 export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ data, selected }) => {
   const isProcessing = data.status === 'processing' || data.status === 'pending';
 
+  const contributorInitial = data.added_by?.display_name
+    ? data.added_by.display_name.charAt(0).toUpperCase()
+    : data.added_by?.email?.charAt(0).toUpperCase() || 'U';
+
   return (
     <div
       className={`relative w-64 p-4 rounded-2xl bg-card-bg-light dark:bg-card-bg-dark border transition-all duration-200 shadow-card hover:shadow-card-hover ${
         selected
           ? 'border-accent ring-2 ring-accent/20'
+          : data.is_own === false
+          ? 'border-indigo-200 dark:border-indigo-900/60 hover:border-indigo-400'
           : 'border-card-border-light dark:border-card-border-dark hover:border-accent/40'
       }`}
     >
-      {/* React Flow Handles for future connections (Step 15) */}
+      {/* React Flow Handles */}
       <Handle
         type="target"
         position={Position.Top}
@@ -43,15 +52,27 @@ export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ data
 
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-accent flex items-center justify-center flex-shrink-0">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.75}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-accent flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.75}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+
+          {/* Katkı Rozeti (Sadece başkası eklemişse görünür) */}
+          {data.is_own === false && data.added_by && (
+            <span
+              className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center justify-center cursor-help border border-indigo-200 dark:border-indigo-800"
+              title={`${data.added_by.display_name} tarafından eklendi`}
+            >
+              {contributorInitial}
+            </span>
+          )}
         </div>
 
         <ProcessingStatusBadge status={data.status || 'done'} />
