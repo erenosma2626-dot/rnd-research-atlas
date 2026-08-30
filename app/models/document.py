@@ -1,0 +1,35 @@
+from pydantic import BaseModel, Field
+
+
+class Section(BaseModel):
+    """Represents a structured section extracted from a document."""
+
+    title: str = Field(..., description="Section title or heading")
+    level: int = Field(
+        ..., description="Heading hierarchy level (1 for top-level, 2 for subsection, etc.)"
+    )
+    text: str = Field(..., description="Extracted textual content of the section")
+    page_start: int = Field(..., description="Starting page number (1-indexed)")
+    page_end: int = Field(..., description="Ending page number (1-indexed)")
+
+
+class Formula(BaseModel):
+    """Represents an isolated mathematical formula extracted from a document."""
+
+    raw_text: str = Field(..., description="Raw formula text or LaTeX extracted by Docling")
+    page: int = Field(..., description="Page number where the formula appears (1-indexed)")
+
+
+class ParsedDocument(BaseModel):
+    """Complete structured representation of a parsed PDF document."""
+
+    sections: list[Section] = Field(
+        default_factory=list, description="List of document sections ordered hierarchically"
+    )
+    formulas: list[Formula] = Field(
+        default_factory=list, description="List of extracted formulas"
+    )
+    raw_markdown: str = Field(
+        ..., description="Complete raw markdown export of the document"
+    )
+    total_pages: int = Field(..., description="Total number of pages in the document")
