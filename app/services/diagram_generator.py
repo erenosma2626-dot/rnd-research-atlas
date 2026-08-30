@@ -80,8 +80,11 @@ def generate_diagram_spec(section: FilledSection) -> GeneratedDiagram:
         f"Generate the DiagramSpec with nodes and edges."
     )
 
+    from app.services.rate_limiter import execute_with_retry
+
     try:
-        spec: DiagramSpec = client.chat.completions.create(
+        spec: DiagramSpec = execute_with_retry(
+            client.chat.completions.create,
             model=model_name,
             response_model=DiagramSpec,
             messages=[
@@ -89,6 +92,7 @@ def generate_diagram_spec(section: FilledSection) -> GeneratedDiagram:
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.1,
+            max_retries=5,
         )
 
         # Truncation Safeguard (Maksimum 8 düğüm kuralı)

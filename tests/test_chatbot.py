@@ -48,7 +48,7 @@ def test_answer_question_with_retrieval_and_history(mock_query, mock_get_client)
     mock_choice = MagicMock()
     mock_choice.message.content = "Makalede öğrenme oranı (learning rate) 0.001 olarak belirtilmiştir."
     mock_client.chat.completions.create.return_value = MagicMock(choices=[mock_choice])
-    mock_get_client.return_value = (mock_client, "openai/gpt-oss-120b")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-20b")
 
     request = ChatRequest(
         document_id="doc-123",

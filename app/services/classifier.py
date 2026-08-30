@@ -83,7 +83,7 @@ def get_instructor_client() -> tuple[Any, str]:
         )
 
     base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-    model = os.getenv("GROQ_CLASSIFY_MODEL", "openai/gpt-oss-120b")
+    model = os.getenv("GROQ_CLASSIFY_MODEL", "openai/gpt-oss-20b")
 
     client = instructor.from_openai(
         OpenAI(api_key=api_key, base_url=base_url),
@@ -114,8 +114,11 @@ def classify_paper(parsed_doc: ParsedDocument) -> PaperProfile:
         "and primary research domain in the exact structured schema."
     )
 
+    from app.services.rate_limiter import execute_with_retry
+
     try:
-        profile: PaperProfile = client.chat.completions.create(
+        profile: PaperProfile = execute_with_retry(
+            client.chat.completions.create,
             model=model_name,
             response_model=PaperProfile,
             messages=[
@@ -123,6 +126,7 @@ def classify_paper(parsed_doc: ParsedDocument) -> PaperProfile:
                 {"role": "user", "content": f"Analyze this paper structure and classify it:\n\n{input_text}"},
             ],
             temperature=0.1,
+            max_retries=5,
         )
 
         # Token kullanımını logla

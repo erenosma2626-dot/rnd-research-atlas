@@ -141,7 +141,7 @@ def test_classify_paper_success(mock_get_client, sample_parsed_document, sample_
     """classify_paper fonksiyonunun başarılı LLM çağrısını test eder."""
     mock_client = MagicMock()
     mock_client.chat.completions.create.return_value = sample_paper_profile
-    mock_get_client.return_value = (mock_client, "openai/gpt-oss-120b")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-20b")
 
     result = classify_paper(sample_parsed_document)
     assert result == sample_paper_profile
@@ -154,7 +154,7 @@ def test_classify_paper_failure_raises_runtime_error(mock_get_client, sample_par
     """classify_paper'ın sessizce default dönmeyip hata fırlattığını test eder."""
     mock_client = MagicMock()
     mock_client.chat.completions.create.side_effect = Exception("Groq rate limit exceeded")
-    mock_get_client.return_value = (mock_client, "openai/gpt-oss-120b")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-20b")
 
     with pytest.raises(RuntimeError) as exc_info:
         classify_paper(sample_parsed_document)

@@ -140,8 +140,11 @@ def fill_section(
         f"Generate the exact structured content for this section."
     )
 
+    from app.services.rate_limiter import execute_with_retry
+
     try:
-        raw_result = client.chat.completions.create(
+        raw_result = execute_with_retry(
+            client.chat.completions.create,
             model=model_name,
             response_model=response_model,
             messages=[
@@ -149,6 +152,7 @@ def fill_section(
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.1,
+            max_retries=5,
         )
 
         # Log LLM Call

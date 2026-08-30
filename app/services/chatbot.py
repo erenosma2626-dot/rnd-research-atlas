@@ -13,7 +13,7 @@ def get_chat_client() -> tuple[OpenAI, str]:
         raise ValueError("GROQ_API_KEY ortam değişkeni ayarlanmamış.")
 
     base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-    model = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
+    model = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-20b")
     client = OpenAI(api_key=api_key, base_url=base_url)
     return client, model
 
@@ -89,11 +89,15 @@ def answer_question(request: ChatRequest) -> ChatResponse:
     )
     messages.append({"role": "user", "content": user_prompt})
 
+    from app.services.rate_limiter import execute_with_retry
+
     try:
-        response = client.chat.completions.create(
+        response = execute_with_retry(
+            client.chat.completions.create,
             model=model_name,
             messages=messages,
             temperature=0.1,
+            max_retries=5,
         )
 
         answer_text = response.choices[0].message.content or "Bu bilgi makalede bulunmuyor."

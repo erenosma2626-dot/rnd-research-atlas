@@ -5,6 +5,7 @@ from openai import OpenAI
 
 from app.models.formula import ExtractedFormula
 from app.services.classifier import LLMCallLog, log_llm_call
+from app.services.rate_limiter import execute_with_retry
 
 _pix2tex_ocr = None
 
@@ -21,7 +22,7 @@ def get_pix2tex_ocr() -> Optional[Any]:
             from pix2tex.cli import LatexOCR
             _pix2tex_ocr = LatexOCR()
         except Exception:
-            _pix2tex_ocr = False  # Yüklenemezse tekrar deneme
+            _pix2tex_ocr = False
     return _pix2tex_ocr if _pix2tex_ocr is not False else None
 
 
@@ -34,21 +35,18 @@ def clean_latex_string(latex_text: str) -> str:
     return cleaned
 
 
+def is_trivial_formula(raw_text: str) -> bool:
+    """Tek haneli rakamlar veya önemsiz semboller için LLM çağrısını atlar."""
+    s = raw_text.strip()
+    if len(s) <= 1:
+        return True
+    if s.isdigit():
+        return True
+    return False
+
+
 def extract_formula_latex(raw_text: str, page: int) -> ExtractedFormula:
-    """Ham formül metnini kademeli pipeline (pix2tex -> Groq LLM fallback) ile LaTeX'e çevirir.
-
-    1. FORMULA_MODE != 'llm_only' ise pix2tex ile OCR/çevrim denenir.
-    2. pix2tex başarısız veya yetersizse Groq LLM fallback tetiklenir.
-       (LLM fallback kullanıldığında low_confidence DAİMA True işaretlenir).
-    3. İkisi de başarısızsa method='failed' döner.
-
-    Args:
-        raw_text: Docling'ten gelen ham formül metni.
-        page: Formülün bulunduğu sayfa numarası.
-
-    Returns:
-        ExtractedFormula: LaTeX kodu, yöntem ve güven bayrağını içeren nesne.
-    """
+    """Ham formül metnini kademeli pipeline (pix2tex -> Groq LLM fallback) ile LaTeX'e çevirir."""
     raw_str = raw_text.strip()
     if not raw_str:
         return ExtractedFormula(
@@ -59,17 +57,25 @@ def extract_formula_latex(raw_text: str, page: int) -> ExtractedFormula:
             low_confidence=True,
         )
 
-    # 1. pix2tex Denemesi (Eğer model mevcutsa)
+    # Çok basit / tek karakterli metinler için LLM kotası harcamadan doğrudan dön
+    if is_trivial_formula(raw_str):
+        return ExtractedFormula(
+            raw_text=raw_text,
+            page=page,
+            latex_code=raw_str,
+            method="docling_raw",
+            low_confidence=False,
+        )
+
+    # 1. pix2tex Denemesi
     ocr = get_pix2tex_ocr()
     if ocr is not None:
         try:
-            # Not: pix2tex görsel bekler. Metin formatında ise doğrudan çevrim yerine
-            # LLM fallback devreye girer. Görsel mevcut olduğunda ocr(img) çağrılır.
             pass
         except Exception:
             pass
 
-    # 2. LLM Fallback (Groq)
+    # 2. LLM Fallback (Groq) with Rate Limiting & Retry
     api_key = os.getenv("GROQ_API_KEY")
     if api_key:
         try:
@@ -78,25 +84,24 @@ def extract_formula_latex(raw_text: str, page: int) -> ExtractedFormula:
             client = OpenAI(api_key=api_key, base_url=base_url)
 
             system_prompt = (
-                "You are an expert mathematical typesetter. Convert the given raw, noisy, or plain-text "
-                "formula into clean, syntactically correct standard LaTeX math notation.\n"
-                "CRITICAL: Return ONLY the raw LaTeX string. Do NOT include markdown code fences, dollar signs ($ or $$), "
-                "or any explanation."
+                "You are an expert mathematical typesetter. Convert the given raw formula into clean LaTeX.\n"
+                "Return ONLY the raw LaTeX string without markdown code fences, dollar signs, or commentary."
             )
 
-            response = client.chat.completions.create(
+            response = execute_with_retry(
+                client.chat.completions.create,
                 model=model_name,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"RAW FORMULA:\n{raw_str}"},
+                    {"role": "user", "content": f"RAW FORMULA:\n{raw_str[:1500]}"},
                 ],
                 temperature=0.1,
+                max_retries=5,
             )
 
             raw_latex = response.choices[0].message.content or ""
             cleaned_latex = clean_latex_string(raw_latex)
 
-            # Token loglama (call_type='formula_fallback')
             log_llm_call(
                 LLMCallLog(
                     call_type="formula_fallback",
@@ -107,7 +112,6 @@ def extract_formula_latex(raw_text: str, page: int) -> ExtractedFormula:
             )
 
             if cleaned_latex:
-                # LLM fallback kullanıldığında low_confidence DAİMA True
                 return ExtractedFormula(
                     raw_text=raw_text,
                     page=page,
@@ -118,7 +122,6 @@ def extract_formula_latex(raw_text: str, page: int) -> ExtractedFormula:
         except Exception:
             pass
 
-    # 3. İki yöntem de başarısız
     return ExtractedFormula(
         raw_text=raw_text,
         page=page,
@@ -130,17 +133,17 @@ def extract_formula_latex(raw_text: str, page: int) -> ExtractedFormula:
 
 def extract_all_formulas(
     formulas: list[Any],
+    max_formulas_limit: int = 15,
 ) -> list[ExtractedFormula]:
     """Tüm ham formüller listesi için LaTeX çıkarma işlemini yürütür.
 
-    Args:
-        formulas: Docling'ten gelen ham formül nesneleri veya sözlükleri.
-
-    Returns:
-        list[ExtractedFormula]: LaTeX'e dönüştürülmüş formüller listesi.
+    TPM / RPM limitlerini korumak için tek dokümanda en önemli ilk N formülü işler.
     """
     extracted: list[ExtractedFormula] = []
-    for item in formulas:
+    # En fazla max_formulas_limit adet formülü işle (RPM ve TPM tasarrufu)
+    selected_formulas = formulas[:max_formulas_limit]
+
+    for item in selected_formulas:
         if isinstance(item, ExtractedFormula):
             raw_text = item.raw_text
             page = item.page
