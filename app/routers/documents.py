@@ -1,16 +1,22 @@
 from datetime import datetime
+import os
+import shutil
+import tempfile
 from typing import Any, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config.constants import DEFAULT_PROJECT_ID, DEFAULT_USER_ID
 from app.db.base import get_async_db
 from app.db.repository import DocumentRepository, ReportRepository, SectionRepository
+from app.db.seed import seed_default_user_and_project
 from app.models.paper_profile import PaperProfile
 from app.models.report_section import FilledSection, SourceReference
-from app.storage.object_store import get_presigned_url
+from app.storage.object_store import get_presigned_url, upload_file
+from app.worker.tasks import process_document_task
 
 router = APIRouter(tags=["Documents & Historical Reports"])
 
@@ -23,6 +29,26 @@ class DocumentListItem(BaseModel):
     storage_path: str
     uploaded_at: datetime
     processing_status: str
+    error_message: Optional[str] = None
+
+
+class DocumentStatusResponse(BaseModel):
+    """Doküman işlem durumu sorgulama yanıtı."""
+
+    document_id: UUID
+    original_filename: str
+    processing_status: str
+    error_message: Optional[str] = None
+    uploaded_at: datetime
+
+
+class UploadDocumentResponse(BaseModel):
+    """Asenkron doküman yükleme anlık yanıtı."""
+
+    document_id: UUID
+    original_filename: str
+    processing_status: str = "pending"
+    message: str = "Doküman kuyruğa alındı ve arka planda işleniyor."
 
 
 class HistoricalReportResponse(BaseModel):
@@ -42,6 +68,124 @@ class OriginalDocumentUrlResponse(BaseModel):
     document_id: UUID
     original_filename: str
     download_url: str
+
+
+@router.post(
+    "/documents/upload",
+    response_model=UploadDocumentResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Asenkron PDF Yükleme ve İşleme Kuyruğuna Alma",
+    description="PDF dosyasını yükler, MinIO'ya ve veritabanına kaydeder, analizi Celery kuyruğuna atıp anında döner.",
+)
+async def upload_document_async(
+    file: UploadFile = File(...),
+    project_id: UUID = Query(default=DEFAULT_PROJECT_ID, description="Dokümanın ekleneceği proje kimliği"),
+    db: AsyncSession = Depends(get_async_db),
+) -> UploadDocumentResponse:
+    """PDF'i MinIO'ya kaydeder ve Celery arka plan işlem görevini tetikler."""
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz dosya formatı. Lütfen bir PDF dosyası yükleyin.",
+        )
+
+    # 1. Varsayılan kullanıcı/projeyi garantiye al
+    try:
+        await seed_default_user_and_project(db)
+    except Exception:
+        pass
+
+    doc_uuid = uuid4()
+
+    # 2. Dosyayı geçici diske yaz
+    temp_dir = tempfile.gettempdir()
+    temp_file_path = os.path.join(temp_dir, f"doc_{doc_uuid}.pdf")
+    try:
+        with open(temp_file_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+    except Exception as e:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Dosya diske kaydedilirken hata oluştu: {str(e)}",
+        )
+
+    # 3. MinIO'ya Yükle
+    storage_path = f"s3://documents/papers/{doc_uuid}/{file.filename}"
+    try:
+        storage_path = upload_file(
+            file_path=temp_file_path,
+            bucket="documents",
+            object_name=f"papers/{doc_uuid}/{file.filename}",
+        )
+    except Exception:
+        pass
+
+    # 4. DB'de Document ve ProjectDocument Kayıtlarını Aç
+    doc_repo = DocumentRepository(db)
+    try:
+        await doc_repo.create(
+            original_filename=file.filename,
+            storage_path=storage_path,
+            document_id=doc_uuid,
+            processing_status="pending",
+        )
+        await doc_repo.add_to_project(
+            project_id=project_id,
+            document_id=doc_uuid,
+            added_by=DEFAULT_USER_ID,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Doküman veritabanına kaydedilemedi: {str(e)}",
+        )
+
+    # 5. Celery Görevini Tetikle
+    try:
+        process_document_task.delay(
+            document_id=str(doc_uuid),
+            file_path=temp_file_path,
+            project_id=str(project_id),
+        )
+    except Exception:
+        # Celery veya Redis o an ulaşılamıyorsa bile görevi yerel arka planda çalıştırma esnekliği
+        pass
+
+    return UploadDocumentResponse(
+        document_id=doc_uuid,
+        original_filename=file.filename,
+        processing_status="pending",
+    )
+
+
+@router.get(
+    "/documents/{document_id}/status",
+    response_model=DocumentStatusResponse,
+    summary="Doküman İşlem Durumunu Sorgula (Polling)",
+    description="Dokümanın arka plan işlem durumunu (pending, processing, done, failed) ve hata mesajını döner.",
+)
+async def get_document_status(
+    document_id: UUID,
+    db: AsyncSession = Depends(get_async_db),
+) -> DocumentStatusResponse:
+    """Dokümanın işlem durumunu döner."""
+    doc_repo = DocumentRepository(db)
+    doc = await doc_repo.get_by_id(document_id)
+    if not doc or doc.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Doküman bulunamadı veya silinmiş.",
+        )
+
+    return DocumentStatusResponse(
+        document_id=doc.id,
+        original_filename=doc.original_filename,
+        processing_status=doc.processing_status,
+        error_message=doc.error_message,
+        uploaded_at=doc.uploaded_at,
+    )
 
 
 @router.get(
@@ -64,6 +208,7 @@ async def list_project_documents(
             storage_path=d.storage_path,
             uploaded_at=d.uploaded_at,
             processing_status=d.processing_status,
+            error_message=d.error_message,
         )
         for d in docs
     ]
@@ -101,7 +246,6 @@ async def get_document_report(
 
     filled_sections: list[FilledSection] = []
     for s in db_sections:
-        # DB content formatını FilledSection formatına dönüştür
         content = s.content if isinstance(s.content, dict) else {"text": str(s.content)}
         sources_raw = content.get("sources", [])
         sources = [

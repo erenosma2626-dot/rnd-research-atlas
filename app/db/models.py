@@ -62,6 +62,7 @@ class Document(Base):
     storage_path: Mapped[str] = mapped_column(String(512), nullable=False)  # s3://documents/path
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     processing_status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, default=None, nullable=True)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
 
     # İlişkiler

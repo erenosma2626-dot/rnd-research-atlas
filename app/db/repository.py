@@ -21,6 +21,7 @@ class DocumentRepository:
         storage_path: str,
         document_id: Optional[UUID] = None,
         processing_status: str = "pending",
+        error_message: Optional[str] = None,
     ) -> Document:
         """Yeni bir doküman kaydı oluşturur."""
         doc = Document(
@@ -28,6 +29,7 @@ class DocumentRepository:
             original_filename=original_filename,
             storage_path=storage_path,
             processing_status=processing_status,
+            error_message=error_message,
         )
         self.session.add(doc)
         await self.session.flush()
@@ -85,12 +87,20 @@ class DocumentRepository:
         await self.session.flush()
         return result.rowcount > 0
 
-    async def update_status(self, document_id: UUID, status: str) -> None:
-        """Dokümanın işlem durumunu (pending, processing, done, failed) günceller."""
+    async def update_status(
+        self,
+        document_id: UUID,
+        status: str,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Dokümanın işlem durumunu (pending, processing, done, failed) ve varsa hata mesajını günceller."""
+        values = {"processing_status": status}
+        if error_message is not None:
+            values["error_message"] = error_message
         stmt = (
             update(Document)
             .where(Document.id == document_id)
-            .values(processing_status=status)
+            .values(**values)
         )
         await self.session.execute(stmt)
         await self.session.flush()

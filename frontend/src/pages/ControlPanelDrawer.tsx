@@ -171,7 +171,7 @@ export const ControlPanelDrawer: React.FC<ControlPanelDrawerProps> = ({
         candidates: candidates,
       };
 
-      const result = await finalizeReport(documentId, originalSections, updatedState);
+      const result = await finalizeReport(documentId, updatedState, originalSections);
       onFinalizeSuccess(result);
       onClose();
     } catch (err: any) {

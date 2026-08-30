@@ -70,7 +70,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
 
         {section.content_type === 'list' && (
           <ul className="space-y-2 my-1">
-            {section.content?.items?.map((item, i) => (
+            {section.content?.items?.map((item: any, i: number) => (
               <li key={i} className="flex items-start gap-2.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 shrink-0" />
                 <span>{item}</span>
@@ -84,7 +84,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
             <table className="w-full text-left text-xs">
               <thead className="bg-bg-light dark:bg-bg-dark border-b border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark font-medium">
                 <tr>
-                  {section.content?.columns?.map((col, i) => (
+                  {section.content?.columns?.map((col: any, i: number) => (
                     <th key={i} className="px-4 py-3">
                       {col}
                     </th>
@@ -92,9 +92,9 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {section.content?.rows?.map((row, rIdx) => (
+                {section.content?.rows?.map((row: any, rIdx: number) => (
                   <tr key={rIdx} className="hover:bg-bg-light/50 dark:hover:bg-bg-dark/50 transition-colors">
-                    {row.map((cell, cIdx) => (
+                    {row.map((cell: any, cIdx: number) => (
                       <td key={cIdx} className="px-4 py-3">
                         {cell}
                       </td>

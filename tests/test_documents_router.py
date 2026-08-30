@@ -17,6 +17,58 @@ def mock_db_session():
     return AsyncMock()
 
 
+def test_upload_document_async_endpoint(mock_db_session):
+    """POST /documents/upload asenkron yükleme endpoint testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    with patch("app.routers.documents.upload_file", return_value="s3://documents/doc.pdf"), \
+         patch("app.routers.documents.process_document_task.delay") as mock_delay, \
+         patch("app.routers.documents.DocumentRepository.create", new_callable=AsyncMock) as mock_create, \
+         patch("app.routers.documents.DocumentRepository.add_to_project", new_callable=AsyncMock) as mock_add:
+
+        file_content = b"%PDF-1.5 sample content"
+        response = client.post(
+            f"/documents/upload?project_id={DEFAULT_PROJECT_ID}",
+            files={"file": ("sample.pdf", file_content, "application/pdf")},
+        )
+        assert response.status_code == 202
+        data = response.json()
+        assert data["original_filename"] == "sample.pdf"
+        assert data["processing_status"] == "pending"
+        assert "document_id" in data
+        mock_delay.assert_called_once()
+
+    app.dependency_overrides.clear()
+
+
+def test_get_document_status_endpoint(mock_db_session):
+    """GET /documents/{document_id}/status durum sorgulama testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    doc_id = uuid4()
+    mock_doc = Document(
+        id=doc_id,
+        original_filename="paper.pdf",
+        storage_path="s3://documents/paper.pdf",
+        uploaded_at=datetime.now(timezone.utc),
+        processing_status="processing",
+        error_message=None,
+        deleted_at=None,
+    )
+
+    with patch("app.routers.documents.DocumentRepository.get_by_id", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_doc
+
+        response = client.get(f"/documents/{doc_id}/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_id"] == str(doc_id)
+        assert data["processing_status"] == "processing"
+        assert data["error_message"] is None
+
+    app.dependency_overrides.clear()
+
+
 def test_list_project_documents_endpoint(mock_db_session):
     """GET /projects/{project_id}/documents endpoint testi."""
     app.dependency_overrides[get_async_db] = lambda: mock_db_session

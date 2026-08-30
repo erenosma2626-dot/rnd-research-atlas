@@ -2,7 +2,7 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9) yanı sıra **Faz 2 Kalıcılık ve Veri Katmanını** (Step 10-11) eksiksiz olarak içerir:
+Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9) yanı sıra **Faz 2 Kalıcılık, Veri, Asenkron İşlem ve Proje Doküman Yönetim Katmanını** (Step 10-13) eksiksiz olarak içerir:
 
 1. **Docling Parser (Step 1):** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
 2. **PaperProfile Classifier (Step 2):** Düşük token maliyetiyle doküman iskeletini tek seferlik Groq API çağrısıyla (`openai/gpt-oss-20b`) analiz ederek 17 bağımsız içerik bayrağı, birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
@@ -14,18 +14,21 @@ Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9) yanı sıra **Fa
 8. **Formül Extraction & LaTeX Capture (Step 8):** Docling'ten gelen ham formül bloklarını `pix2tex` veya Groq (`openai/gpt-oss-20b`) fallback ile LaTeX'e dönüştürür; `has_heavy_notation` durumunda rapor bölümlerini anahtar formüllerle zenginleştirir.
 9. **Frontend Web Arayüzü (Step 9):** React + Vite + Tailwind CSS ile inşa edilmiş; KaTeX formül görüntüleme, Mermaid akış diyagramları, sürükle-bırak kontrol paneli çekmecesi (`@dnd-kit`), açık/koyu tema ve sağ altta yüzen chatbot arayüzü sunan çalışan prototiptir.
 10. **PostgreSQL Şeması & MinIO Depolama (Step 10):** SQLAlchemy 2.0 Async, asyncpg ve Alembic ile ORM modelleri (`User`, `Project`, `Document`, `Report`, `Section`, `Note`, `Tag`), Docker Compose ve MinIO S3-uyumlu obje depolama altyapısıdır.
-11. **Pipeline DB & Obje Depolama Entegrasyonu (Step 11):** PDF yüklemelerinin MinIO'ya ve analiz sonuçlarının PostgreSQL'e kaydedildiği kalıcı boru hattı; geçmiş dökümanları ve raporları yeniden LLM çalıştırmadan getiren (`GET /projects/{id}/documents`, `GET /documents/{id}/report`, `GET /documents/{id}/original`) REST API katmanıdır.
+11. **Pipeline DB & Obje Depolama Entegrasyonu (Step 11):** PDF yüklemelerinin MinIO'ya ve analiz sonuçlarının PostgreSQL'e kaydedildiği kalıcı boru hattı; geçmiş dökümanları ve raporları yeniden LLM çalıştırmadan getiren REST API katmanıdır.
+12. **Asenkron İşlem Mimarisi (Step 12):** Celery + Redis tabanlı kuyruk yapısı; anında cevap dönen `POST /documents/upload`, `GET /documents/{id}/status` polling endpoint'i ve arka plan hata/yeniden deneme yönetimidir.
+13. **Frontend Asenkron Akış & Proje Doküman Listesi (Step 13):** Projedeki tüm dokümanları listeleyen pano görünümü (`ProjectPage`, `DocumentCard`), gerçek zamanlı durum takibi (`usePollDocumentStatus`, `ProcessingStatusBadge`) ve işlenen raporlara kesintisiz geçiştir.
 
 ---
 
 ## 🚀 Kurulum
 
-### 1. Docker ile Servisleri Başlatma
+### 1. Docker ile Servisleri Başlatma (Postgres, MinIO, Redis)
 ```bash
 docker compose up -d
 ```
 - **PostgreSQL:** `localhost:5432`
 - **MinIO S3:** `localhost:9000` | **MinIO Panel:** `http://localhost:9001` (Kullanıcı: `devadmin`, Şifre: `devpassword123`)
+- **Redis:** `localhost:6379`
 
 ### 2. Backend Kurulumu & Migration
 ```bash
@@ -36,7 +39,7 @@ source .venv/bin/activate
 # Bağımlılıkları yükleme
 pip install -r requirements.txt
 
-# Veritabanı tablolarını oluşturma
+# Veritabanı tablolarını oluşturma / güncelleme
 alembic upgrade head
 
 # Ortam değişkenlerini yapılandırma
@@ -57,6 +60,7 @@ MINIO_ACCESS_KEY=devadmin
 MINIO_SECRET_KEY=devpassword123
 MINIO_BUCKET=documents
 MINIO_SECURE=false
+REDIS_URL=redis://localhost:6379/0
 ```
 
 ### 3. Frontend Kurulumu
@@ -69,13 +73,18 @@ npm install
 
 ## 💻 Çalıştırma
 
-### Backend Sunucusunu Başlatma
+### 1. Backend API Sunucusunu Başlatma (Terminal 1)
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 - **Swagger Dokümantasyonu:** `http://127.0.0.1:8000/docs`
 
-### Frontend Geliştirme Sunucusunu Başlatma
+### 2. Celery Arka Plan Worker'ını Başlatma (Terminal 2)
+```bash
+celery -A app.worker.celery_app worker --loglevel=info
+```
+
+### 3. Frontend Geliştirme Sunucusunu Başlatma (Terminal 3)
 ```bash
 cd frontend
 npm run dev
@@ -87,7 +96,7 @@ npm run dev
 ## 🧪 Testleri Çalıştırma
 
 ```bash
-# Backend Testleri (66 Test)
+# Backend Testleri (70 Test)
 .venv/bin/pytest tests/
 
 # Frontend Build Testi
