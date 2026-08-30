@@ -1,3 +1,5 @@
+import { supabase } from '../auth/supabaseClient';
+
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000002';
@@ -17,6 +19,17 @@ export function getAuthHeaders(customHeaders: Record<string, string> = {}): Reco
 }
 
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  if (!authToken) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        authToken = data.session.access_token;
+      }
+    } catch {
+      // Supabase başlatılamadıysa devam et
+    }
+  }
+
   const headers = getAuthHeaders(
     (options.headers as Record<string, string>) || {}
   );

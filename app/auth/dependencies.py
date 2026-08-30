@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.supabase_client import verify_jwt
 from app.db.base import get_async_db
-from app.db.models import Canvas, Project, User
+from datetime import datetime, timezone
+from app.db.models import Canvas, Project, ProjectMember, User
 
 
 async def get_current_user(
@@ -61,14 +62,24 @@ async def get_current_user(
         db.add(user)
         await db.flush()
 
-        # Kullanıcı için varsayılan bir proje ve canvas oluştur
+        # Kullanıcı için varsayılan bir proje, üyelik ve canvas oluştur
+        now = datetime.now(timezone.utc)
         default_project = Project(
             owner_id=user.id,
             name="Varsayılan Proje",
-            description="Kullanıcıya özel ilk araştırma projesi",
         )
         db.add(default_project)
         await db.flush()
+
+        member = ProjectMember(
+            project_id=default_project.id,
+            user_id=user.id,
+            role="owner",
+            invited_by=user.id,
+            joined_at=now,
+            invited_at=now,
+        )
+        db.add(member)
 
         default_canvas = Canvas(
             project_id=default_project.id,
