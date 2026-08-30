@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import inspect
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
@@ -496,6 +497,8 @@ class ProjectRepository:
         )
         res = await self.session.execute(stmt)
         rows = res.all()
+        if inspect.isawaitable(rows):
+            rows = await rows
 
         return [
             {
@@ -505,7 +508,7 @@ class ProjectRepository:
                 "created_at": r.created_at,
                 "role": r.role,
             }
-            for r in rows
+            for r in (rows or [])
         ]
 
     async def soft_delete(self, project_id: UUID) -> bool:

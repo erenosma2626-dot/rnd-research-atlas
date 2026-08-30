@@ -3,11 +3,16 @@ import { uploadDocument } from '../api/client';
 import { useTheme } from '../theme/ThemeContext';
 
 interface UploadPageProps {
+  projectId?: string;
   onUploadSuccess: (documentId: string, filename: string) => void;
   onNavigateHome: () => void;
 }
 
-export const UploadPage: React.FC<UploadPageProps> = ({ onUploadSuccess, onNavigateHome }) => {
+export const UploadPage: React.FC<UploadPageProps> = ({
+  projectId,
+  onUploadSuccess,
+  onNavigateHome,
+}) => {
   const { isDark, toggleTheme } = useTheme();
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -23,7 +28,7 @@ export const UploadPage: React.FC<UploadPageProps> = ({ onUploadSuccess, onNavig
     setIsUploading(true);
 
     try {
-      const response = await uploadDocument(file);
+      const response = await uploadDocument(file, projectId);
       onUploadSuccess(response.document_id, file.name);
     } catch (err: any) {
       setError(err.message || 'Dosya yükleme sırasında bir hata oluştu.');

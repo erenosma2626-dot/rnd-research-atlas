@@ -21,10 +21,14 @@ def test_upload_document_async_endpoint(mock_db_session):
     """POST /documents/upload asenkron yükleme endpoint testi."""
     app.dependency_overrides[get_async_db] = lambda: mock_db_session
 
+    mock_member = MagicMock()
+    mock_member.role = "owner"
+
     with patch("app.routers.documents.upload_file", return_value="s3://documents/doc.pdf"), \
          patch("app.routers.documents.process_document_task.delay") as mock_delay, \
          patch("app.routers.documents.DocumentRepository.create", new_callable=AsyncMock) as mock_create, \
-         patch("app.routers.documents.DocumentRepository.add_to_project", new_callable=AsyncMock) as mock_add:
+         patch("app.routers.documents.DocumentRepository.add_to_project", new_callable=AsyncMock) as mock_add, \
+         patch("app.routers.documents.ProjectMemberRepository.get_member", new_callable=AsyncMock, return_value=mock_member):
 
         file_content = b"%PDF-1.5 sample content"
         response = client.post(

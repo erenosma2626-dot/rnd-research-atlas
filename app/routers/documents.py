@@ -10,11 +10,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
-from app.auth.permissions import require_role
+from app.auth.permissions import ROLE_HIERARCHY, require_role
 from app.config.constants import DEFAULT_PROJECT_ID
 from app.db.base import get_async_db
 from app.db.models import ProjectMember, User
-from app.db.repository import DocumentRepository, InventoryRepository, ReportRepository, SectionRepository
+from app.db.repository import (
+    DocumentRepository,
+    InventoryRepository,
+    ProjectMemberRepository,
+    ProjectRepository,
+    ReportRepository,
+    SectionRepository,
+)
 from app.models.paper_profile import PaperProfile
 from app.models.report_section import FilledSection, SourceReference
 from app.storage.object_store import get_presigned_url, upload_file
@@ -108,8 +115,7 @@ class OriginalDocumentUrlResponse(BaseModel):
 )
 async def upload_document_async(
     file: UploadFile = File(...),
-    project_id: UUID = Query(default=DEFAULT_PROJECT_ID, description="Dokümanın ekleneceği proje kimliği"),
-    _: ProjectMember = Depends(require_role("editor")),
+    project_id: Optional[UUID] = Query(default=None, description="Dokümanın ekleneceği proje kimliği (Opsiyonel)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> UploadDocumentResponse:
@@ -118,6 +124,38 @@ async def upload_document_async(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Geçersiz dosya formatı. Lütfen bir PDF dosyası yükleyin.",
+        )
+
+    # 1. Hedef projeyi belirle ve yetkiyi kontrol et
+    proj_repo = ProjectRepository(db)
+    member_repo = ProjectMemberRepository(db)
+
+    target_project_id = project_id
+    if not target_project_id or target_project_id == DEFAULT_PROJECT_ID:
+        user_projects = await proj_repo.list_by_user(current_user.id)
+        if user_projects:
+            first_p = user_projects[0]
+            target_project_id = first_p["id"] if isinstance(first_p, dict) else first_p.id
+        else:
+            new_proj = await proj_repo.create(owner_id=current_user.id, name="Varsayılan Proje")
+            target_project_id = new_proj.id
+
+    member = await member_repo.get_member(target_project_id, current_user.id)
+    if not member:
+        project = await proj_repo.get_by_id(target_project_id)
+        if project and project.owner_id == current_user.id:
+            member = await member_repo.add_member(target_project_id, current_user.id, "owner")
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bu projeye doküman yükleme yetkiniz bulunmuyor.",
+            )
+
+    user_role = member.role if isinstance(member, ProjectMember) else "owner"
+    if ROLE_HIERARCHY.get(user_role, 0) < ROLE_HIERARCHY.get("editor", 1):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Bu projeye doküman yüklemek için en az 'editor' rolü gereklidir. Mevcut rolünüz: '{user_role}'.",
         )
 
     doc_uuid = uuid4()
@@ -157,7 +195,7 @@ async def upload_document_async(
             processing_status="pending",
         )
         await doc_repo.add_to_project(
-            project_id=project_id,
+            project_id=target_project_id,
             document_id=doc_uuid,
             added_by=current_user.id,
         )
@@ -172,10 +210,9 @@ async def upload_document_async(
         process_document_task.delay(
             document_id=str(doc_uuid),
             file_path=temp_file_path,
-            project_id=str(project_id),
+            project_id=str(target_project_id),
         )
     except Exception:
-        # Celery veya Redis o an ulaşılamıyorsa bile görevi yerel arka planda çalıştırma esnekliği
         pass
 
     return UploadDocumentResponse(

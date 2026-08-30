@@ -153,6 +153,7 @@ function AuthenticatedApp() {
 
       {currentView === 'upload' && (
         <UploadPage
+          projectId={activeProjectId}
           onUploadSuccess={handleUploadSuccess}
           onNavigateHome={handleNavigateHome}
         />
