@@ -1,3 +1,12 @@
+from app.models.diagram import (
+    DiagramEdge,
+    DiagramNode,
+    DiagramSpec,
+    FinalizeReportWithDiagramsResponse,
+    GenerateDiagramRequest,
+    GenerateDiagramsBatchRequest,
+    GeneratedDiagram,
+)
 from app.models.document import Formula, ParsedDocument, Section
 from app.models.paper_profile import (
     ClassifyRequest,
@@ -46,4 +55,11 @@ __all__ = [
     "ControlPanelState",
     "BuildControlPanelRequest",
     "FinalizeReportRequest",
+    "DiagramNode",
+    "DiagramEdge",
+    "DiagramSpec",
+    "GeneratedDiagram",
+    "GenerateDiagramRequest",
+    "GenerateDiagramsBatchRequest",
+    "FinalizeReportWithDiagramsResponse",
 ]

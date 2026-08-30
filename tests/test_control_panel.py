@@ -211,7 +211,9 @@ def test_control_panel_endpoints(sample_filled_sections):
         },
     )
     assert finalize_resp.status_code == 200
-    final_list = finalize_resp.json()
-    assert len(final_list) == 2
-    assert final_list[0]["group_id"] == "method_steps"
-    assert final_list[0]["diagram_requested"] is True
+    final_data = finalize_resp.json()
+    assert "sections" in final_data
+    assert "diagrams" in final_data
+    assert len(final_data["sections"]) == 2
+    assert final_data["sections"][0]["group_id"] == "method_steps"
+    assert final_data["sections"][0]["diagram_requested"] is True

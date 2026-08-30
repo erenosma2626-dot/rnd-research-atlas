@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
+from app.models.diagram import FinalizeReportWithDiagramsResponse
 from app.models.report_section import FilledSection
 from app.models.section_candidate import (
     BuildControlPanelRequest,
@@ -11,6 +12,7 @@ from app.services.control_panel import (
     build_control_panel_state,
     build_final_report,
 )
+from app.services.diagram_generator import generate_diagrams_batch
 
 router = APIRouter(prefix="/control-panel", tags=["Control Panel"])
 
@@ -63,23 +65,34 @@ async def update_control_panel_endpoint(
 
 @router.post(
     "/finalize",
-    response_model=list[FilledSection],
-    summary="Nihai raporu oluştur ve filtrele",
-    description="Kontrol paneli seçimlerine göre bölümleri sıralar, dahil edilmeyenleri çıkarır ve diyagram taleplerini işler.",
+    response_model=FinalizeReportWithDiagramsResponse,
+    summary="Nihai raporu oluştur, filtrele ve talep edilen diyagramları üret",
+    description="Kontrol paneli seçimlerine göre bölümleri sıralar, dahil edilmeyenleri çıkarır ve diagram_requested=True olan bölümler için Mermaid diyagramlarını üretir.",
 )
 async def finalize_report_endpoint(
     request: FinalizeReportRequest,
-) -> list[FilledSection]:
-    """Seçimlere göre sıralanmış ve filtrelenmiş final rapor bölümlerini döner."""
+) -> FinalizeReportWithDiagramsResponse:
+    """Seçimlere göre sıralanmış rapor bölümlerini ve üretilen diyagramları döner."""
     try:
         final_sections = build_final_report(
             document_id=request.document_id,
             filled_sections=request.filled_sections,
             control_panel_state=request.control_panel_state,
         )
-        return final_sections
+
+        # diagram_requested=True olan bölümler için diyagram üret
+        sections_with_diagram_requested = [
+            sec for sec in final_sections if sec.diagram_requested
+        ]
+        generated_diagrams = generate_diagrams_batch(sections_with_diagram_requested)
+
+        return FinalizeReportWithDiagramsResponse(
+            document_id=request.document_id,
+            sections=final_sections,
+            diagrams=generated_diagrams,
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Nihai rapor oluşturulurken hata: {str(e)}",
+            detail=f"Nihai rapor ve diyagramlar oluşturulurken hata: {str(e)}",
         )

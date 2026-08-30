@@ -2,13 +2,14 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Faz 1 Analiz Motorunun** Step 1, 2, 3, 4 ve 5 aşamalarını eksiksiz olarak içerir:
+Bu repo **Faz 1 Analiz Motorunun** Step 1, 2, 3, 4, 5 ve 6 aşamalarını eksiksiz olarak içerir:
 
 1. **Docling Parser (Step 1):** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
 2. **PaperProfile Classifier (Step 2):** Düşük token maliyetiyle doküman iskeletini tek seferlik Groq API çağrısıyla (`llama-3.3-70b-versatile`) analiz ederek 17 bağımsız içerik bayrağı (Matematik, ML/AI/DS, Yapısal), birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
 3. **Section Routing & ChromaDB (Step 3):** `PaperProfile` bayraklarına göre makale için üretilecek aktif rapor bölüm gruplarını (`ActiveSectionGroup`) belirler ve bölüm sınırlarını koruyarak dokümanı yerel persistent ChromaDB'ye (`chroma_data/`) indeksler.
 4. **Slot Doldurma & Rapor Üretimi (Step 4):** Her aktif bölüm grubu için ChromaDB'den semantik parçaları çeker (retrieval) ve Groq structured output ile tipine uygun (`prose`, `table`, `list`) zengin rapor içeriğini kaynak sayfa referanslarıyla (`SourceReference`) üretir.
-5. **Kontrol Paneli (Step 5):** Kullanıcının hangi bölümleri rapora dahil edeceğini, bölüm sırasını (`order`) ve hangi bölümler için diyagram üretileceğini (`diagram_requested`) belirleyip nihai raporu finalize etmesini sağlayan ara yönetim katmanıdır.
+5. **Kontrol Paneli (Step 5):** Kullanıcının hangi bölümleri rapora dahil edeceğini, bölüm sırasını (`order`) ve hangi bölümler için diyagram üretileceğini (`diagram_requested`) belirleyip nihai raporu finalize etmesini sağlayan yönetim katmanıdır.
+6. **Deterministik Diyagram Üretimi (Step 6):** Groq (`llama-3.1-8b-instant`) sadece kısa bir graf JSON spesifikasyonu (`DiagramSpec`: nodes + edges) üretir; Mermaid.js koduna çevrim deterministik olarak kod tarafında yapılır (sıfır LLM syntax hatası).
 
 ---
 
@@ -32,6 +33,7 @@ cp .env.example .env
 ```env
 GROQ_API_KEY=gsk_...
 GROQ_CLASSIFY_MODEL=llama-3.3-70b-versatile
+GROQ_DIAGRAM_MODEL=llama-3.1-8b-instant
 ```
 
 ---
@@ -64,7 +66,9 @@ Sunucu ayağa kalktıktan sonra:
 | `POST` | `/full-pipeline` | **Uçtan Uca:** PDF -> Parse -> Classify -> Index -> Route -> Slot Fill |
 | `POST` | `/control-panel/build` | Doldurulmuş bölümlerden kullanıcı kontrol paneli durumunu oluşturur |
 | `PATCH` | `/control-panel/update` | Kullanıcı bölüm seçimlerini ve sıralamayı günceller |
-| `POST` | `/control-panel/finalize` | Seçimlere göre filtrelenmiş ve sıralanmış nihai raporu döner |
+| `POST` | `/control-panel/finalize` | Seçimlere göre filtrelenmiş raporu ve talep edilen Mermaid diyagramlarını döner |
+| `POST` | `/generate-diagram` | Tek bir bölüm için `DiagramSpec` ve deterministik Mermaid kodu üretir |
+| `POST` | `/generate-diagrams-batch` | İstenen bölümler için toplu Mermaid diyagramları üretir |
 
 ---
 
