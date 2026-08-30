@@ -27,6 +27,9 @@ class FilledSection(BaseModel):
     sources: list[SourceReference] = Field(
         default_factory=list, description="İçeriğin çekildiği kaynak referansları"
     )
+    diagram_requested: bool = Field(
+        default=False, description="Kullanıcının bu bölüm için diyagram üretimi talep edip etmediği"
+    )
 
 
 class GenerateReportRequest(BaseModel):

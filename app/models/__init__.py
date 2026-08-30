@@ -18,6 +18,12 @@ from app.models.routing import (
     ParseClassifyIndexResponse,
     RouteSectionsRequest,
 )
+from app.models.section_candidate import (
+    BuildControlPanelRequest,
+    ControlPanelState,
+    FinalizeReportRequest,
+    SectionCandidate,
+)
 
 __all__ = [
     "Section",
@@ -36,4 +42,8 @@ __all__ = [
     "GenerateReportRequest",
     "GenerateReportResponse",
     "FullPipelineResponse",
+    "SectionCandidate",
+    "ControlPanelState",
+    "BuildControlPanelRequest",
+    "FinalizeReportRequest",
 ]

@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.classify import router as classify_router
+from app.routers.control_panel import router as control_panel_router
 from app.routers.index import router as index_router
 from app.routers.parse import router as parse_router
 from app.routers.report import router as report_router
@@ -12,8 +13,8 @@ load_dotenv()
 
 app = FastAPI(
     title="rnd-paper-canvas API",
-    description="Akademik makale ve araştırma raporları analiz motoru - Step 4: End-to-End Pipeline & Slot Filling",
-    version="0.4.0",
+    description="Akademik makale ve araştırma raporları analiz motoru - Step 5: Control Panel & Section Customization",
+    version="0.5.0",
 )
 
 # CORS middleware for frontend integration
@@ -30,6 +31,7 @@ app.include_router(parse_router)
 app.include_router(classify_router)
 app.include_router(index_router)
 app.include_router(report_router)
+app.include_router(control_panel_router)
 
 
 @app.get(
