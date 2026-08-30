@@ -2,12 +2,12 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Step 1 (Docling Parser)**, **Step 2 (PaperProfile Classifier)** ve **Step 3 (Section Routing + ChromaDB Vector Store)** aşamalarını içerir:
+Bu repo **Faz 1 Analiz Motorunun** Step 1, 2, 3 ve 4 aşamalarını eksiksiz olarak içerir:
 
-1. **Docling Parser:** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
-2. **PaperProfile Classifier (Groq):** Düşük token maliyetiyle doküman iskeletini (özet + başlık hiyerarşisi + formül metrikleri) tek seferlik Groq API çağrısıyla (`llama-3.3-70b-versatile`) analiz ederek 17 bağımsız içerik bayrağı (Matematik, ML/AI/DS, Yapısal), birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır. Token harcamaları `logs/llm_calls.jsonl` dosyasına kaydedilir.
-3. **Section Routing:** `PaperProfile` bayraklarına ve genişletilebilir `SECTION_GROUPS` konfigürasyonuna göre makale için üretilecek aktif rapor bölüm gruplarını (`ActiveSectionGroup`) belirler.
-4. **ChromaDB Vektör İndeksleme:** Bölüm sınırlarını ve metadata bilgilerini (`document_id`, `section_title`, `section_level`, `page_start`, `page_end`) koruyarak dokümanı yerel kalıcı vektör veritabanına (`chroma_data/`) indeksler; section-bazlı semantik erişim sağlar.
+1. **Docling Parser (Step 1):** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
+2. **PaperProfile Classifier (Step 2):** Düşük token maliyetiyle doküman iskeletini tek seferlik Groq API çağrısıyla (`llama-3.3-70b-versatile`) analiz ederek 17 bağımsız içerik bayrağı (Matematik, ML/AI/DS, Yapısal), birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
+3. **Section Routing & ChromaDB (Step 3):** `PaperProfile` bayraklarına göre makale için üretilecek aktif rapor bölüm gruplarını (`ActiveSectionGroup`) belirler ve bölüm sınırlarını koruyarak dokümanı yerel persistent ChromaDB'ye (`chroma_data/`) indeksler.
+4. **Slot Doldurma & Rapor Üretimi (Step 4):** Her aktif bölüm grubu için ChromaDB'den semantik parçaları çeker (retrieval) ve Groq structured output ile tipine uygun (`prose`, `table`, `list`) zengin rapor içeriğini kaynak sayfa referanslarıyla (`SourceReference`) üretir.
 
 ---
 
@@ -51,94 +51,89 @@ Sunucu ayağa kalktıktan sonra:
 
 ## 📡 API Uç Noktaları
 
-### 1. Sağlık Kontrolü
-- **`GET /health`** -> `{"status": "ok"}`
+| Metot | Uç Nokta | Açıklama |
+|---|---|---|
+| `GET` | `/health` | Servis sağlık kontrolü |
+| `POST` | `/parse` | PDF dosyasını Docling ile yapısal JSON'a dönüştürür |
+| `POST` | `/classify` | Ayrıştırılmış dokümandan 17 içerik bayrağı ve `PaperProfile` çıkarır |
+| `POST` | `/index` | Dokümanı bölüm ve sayfa metadata'larıyla ChromaDB'ye indeksler |
+| `POST` | `/route-sections` | `PaperProfile`'a göre üretilecek aktif bölüm gruplarını döner |
+| `POST` | `/generate-report` | ChromaDB'den chunk çekip aktif bölümler için içerik üretir |
+| `POST` | `/parse-classify-index` | PDF -> Parse -> Classify -> Index -> Route adımlarını çalıştırır |
+| `POST` | `/full-pipeline` | **Uçtan Uca:** PDF -> Parse -> Classify -> Index -> Route -> Slot Fill (Nihai Rapor) |
 
-### 2. PDF Parse Etme (Step 1)
-- **`POST /parse`** -> `ParsedDocument`
+---
 
-### 3. Makale Sınıflandırma (Step 2)
-- **`POST /classify`** -> `PaperProfile`
+### `/full-pipeline` Örnek Yanıt Şeması
 
-### 4. Vektör İndeksleme (Step 3)
-- **`POST /index`** -> `{"status": "indexed", "chunk_count": int}`
-
-### 5. Bölüm Yönlendirme (Step 3)
-- **`POST /route-sections`** -> `list[ActiveSectionGroup]`
-
-### 6. Uçtan Uca Birleşik Pipeline (Step 3)
-- **`POST /parse-classify-index`**
-- Multipart form üzerinden `file` (PDF) yüklenir.
-- Yanıt Şeması (`ParseClassifyIndexResponse`):
-  ```json
-  {
-    "document_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "parsed_document": {
-      "sections": [...],
-      "formulas": [...],
-      "raw_markdown": "...",
-      "total_pages": 8
+```json
+{
+  "document_id": "b3e94e4a-93a5-48b4-9273-0599dfa8d052",
+  "paper_profile": {
+    "has_theorem_proof": false,
+    "has_heavy_notation": true,
+    "has_algorithm_pseudocode": true,
+    "has_complexity_analysis": false,
+    "has_optimization_formulation": true,
+    "has_ml_experiment": true,
+    "has_ablation_study": true,
+    "has_dataset": true,
+    "has_preprocessing_pipeline": false,
+    "has_hyperparameter_tuning": true,
+    "has_baseline_comparison": true,
+    "has_evaluation_metrics": true,
+    "has_system_architecture": false,
+    "has_survey_structure": false,
+    "has_case_study": false,
+    "has_limitations_section": true,
+    "has_future_work": true,
+    "primary_domain": "NLP optimization",
+    "confidence": 0.95
+  },
+  "sections": [
+    {
+      "group_id": "core_summary",
+      "title": "Özet ve Katkı",
+      "content_type": "prose",
+      "content": {
+        "text": "Bu makale, büyük dil modellerinde çıkarım hızını artıran yeni bir optimizasyon tekniği sunmaktadır..."
+      },
+      "sources": [
+        { "page": 1, "section_title": "Abstract" },
+        { "page": 2, "section_title": "Introduction" }
+      ]
     },
-    "paper_profile": {
-      "has_theorem_proof": false,
-      "has_heavy_notation": true,
-      "has_algorithm_pseudocode": true,
-      "has_complexity_analysis": false,
-      "has_optimization_formulation": true,
-      "has_ml_experiment": true,
-      "has_ablation_study": true,
-      "has_dataset": true,
-      "has_preprocessing_pipeline": false,
-      "has_hyperparameter_tuning": true,
-      "has_baseline_comparison": true,
-      "has_evaluation_metrics": true,
-      "has_system_architecture": false,
-      "has_survey_structure": false,
-      "has_case_study": false,
-      "has_limitations_section": true,
-      "has_future_work": true,
-      "primary_domain": "optimization theory",
-      "confidence": 0.94
+    {
+      "group_id": "ml_experiment_table",
+      "title": "Veri & Yöntem (ML)",
+      "content_type": "table",
+      "content": {
+        "columns": ["Dataset", "Ön İşleme", "Model", "Hiperparametreler", "Metrik", "Sonuç"],
+        "rows": [
+          ["GLUE Benchmark", "BPE Tokenization", "Transformer-Base", "lr=2e-5, bsz=32", "Accuracy", "88.4%"]
+        ]
+      },
+      "sources": [
+        { "page": 4, "section_title": "Experiments and Results" }
+      ]
     },
-    "active_sections": [
-      {
-        "group_id": "core_summary",
-        "title": "Özet ve Katkı",
-        "matched_flags": []
+    {
+      "group_id": "method_steps",
+      "title": "Yöntem",
+      "content_type": "list",
+      "content": {
+        "items": [
+          "**Adım 1:** Giriş gömme vektörlerinin seyreltilmesi.",
+          "**Adım 2:** Dikkat matrisinin blok bazlı hesaplanması."
+        ]
       },
-      {
-        "group_id": "method_steps",
-        "title": "Yöntem",
-        "matched_flags": []
-      },
-      {
-        "group_id": "ml_experiment_table",
-        "title": "Veri & Yöntem (ML)",
-        "matched_flags": ["has_dataset", "has_ml_experiment", "has_hyperparameter_tuning", "has_evaluation_metrics", "has_baseline_comparison"]
-      },
-      {
-        "group_id": "optimization_formulation",
-        "title": "Optimizasyon Formülasyonu",
-        "matched_flags": ["has_optimization_formulation"]
-      },
-      {
-        "group_id": "algorithm_section",
-        "title": "Algoritma",
-        "matched_flags": ["has_algorithm_pseudocode"]
-      },
-      {
-        "group_id": "ablation_study",
-        "title": "Ablation Çalışması",
-        "matched_flags": ["has_ablation_study"]
-      },
-      {
-        "group_id": "limitations_future",
-        "title": "Sınırlamalar ve Gelecek Çalışmalar",
-        "matched_flags": ["has_limitations_section", "has_future_work"]
-      }
-    ]
-  }
-  ```
+      "sources": [
+        { "page": 3, "section_title": "Proposed Method" }
+      ]
+    }
+  ]
+}
+```
 
 ---
 
