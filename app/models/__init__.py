@@ -1,3 +1,9 @@
+from app.models.chat import (
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    ChatSource,
+)
 from app.models.diagram import (
     DiagramEdge,
     DiagramNode,
@@ -62,4 +68,8 @@ __all__ = [
     "GenerateDiagramRequest",
     "GenerateDiagramsBatchRequest",
     "FinalizeReportWithDiagramsResponse",
+    "ChatSource",
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
 ]

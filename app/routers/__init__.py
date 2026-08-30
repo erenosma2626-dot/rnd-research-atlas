@@ -1,3 +1,4 @@
+from app.routers.chat import router as chat_router
 from app.routers.classify import router as classify_router
 from app.routers.control_panel import router as control_panel_router
 from app.routers.diagram import router as diagram_router
@@ -12,4 +13,5 @@ __all__ = [
     "report_router",
     "control_panel_router",
     "diagram_router",
+    "chat_router",
 ]
