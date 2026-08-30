@@ -18,3 +18,4 @@ celery>=5.4.0
 redis>=5.0.0
 pyjwt>=2.8.0
 cryptography>=42.0.0
+supabase>=2.30.0
