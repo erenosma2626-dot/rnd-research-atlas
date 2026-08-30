@@ -93,23 +93,23 @@ export const ProjectSettingsPage: React.FC<ProjectSettingsPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-200">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-bg-light/80 dark:bg-bg-dark/80 border-b border-card-border-light dark:border-card-border-dark">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white transition-colors duration-200 font-sans">
+      {/* Top Sticky Glassmorphic Navbar */}
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-[#0A0A0A]/80 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={onNavigateBack}
-              className="p-2 rounded-xl text-text-secondary-light hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-colors"
+              className="p-2 rounded-full border border-black/[0.06] dark:border-white/[0.08] text-black/50 dark:text-white/50 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
               title="Geri Dön"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <div>
-              <h1 className="text-base font-semibold">{projectName}</h1>
-              <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              <h1 className="text-sm font-semibold tracking-tight">{projectName}</h1>
+              <p className="text-[11px] text-black/50 dark:text-white/50">
                 Proje Ayarları & Üyeler
               </p>
             </div>
@@ -117,7 +117,7 @@ export const ProjectSettingsPage: React.FC<ProjectSettingsPageProps> = ({
 
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-xl border border-card-border-light dark:border-card-border-dark text-text-secondary-light hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-colors"
+            className="p-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
             title={isDark ? 'Açık Mod' : 'Koyu Mod'}
           >
             {isDark ? (
@@ -134,17 +134,19 @@ export const ProjectSettingsPage: React.FC<ProjectSettingsPageProps> = ({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-6 py-12 space-y-10">
         {/* Üye Davet Formu (Sadece Owner) */}
         {isOwner ? (
-          <div className="p-6 rounded-3xl bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark shadow-xs">
-            <h2 className="text-base font-bold mb-1">Projeye Üye Davet Et</h2>
-            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mb-5">
+          <div className="p-8 rounded-3xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-sm">
+            <h2 className="font-serif text-2xl font-medium tracking-tight mb-1 text-[#0A0A0A] dark:text-white">
+              Projeye Üye Davet Et
+            </h2>
+            <p className="text-xs text-black/50 dark:text-white/50 mb-6">
               İş arkadaşınızı projeye dahil etmek için e-posta adresini girin ve davet bağlantısı üretin.
             </p>
 
             {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600">
+              <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600 font-mono">
                 {errorMsg}
               </div>
             )}
@@ -156,13 +158,13 @@ export const ProjectSettingsPage: React.FC<ProjectSettingsPageProps> = ({
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="arkadasiniz@lab.io"
                 required
-                className="flex-1 px-3.5 py-2 rounded-xl text-xs bg-bg-light dark:bg-bg-dark border border-card-border-light dark:border-card-border-dark outline-none focus:border-accent"
+                className="flex-1 px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30"
               />
 
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as any)}
-                className="px-3 py-2 rounded-xl text-xs bg-bg-light dark:bg-bg-dark border border-card-border-light dark:border-card-border-dark outline-none focus:border-accent"
+                className="px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30"
               >
                 <option value="editor">Editör (Yükleme & Düzenleme)</option>
                 <option value="viewer">İzleyici (Sadece Okuma)</option>
@@ -171,55 +173,57 @@ export const ProjectSettingsPage: React.FC<ProjectSettingsPageProps> = ({
               <button
                 type="submit"
                 disabled={inviting}
-                className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all shadow-xs disabled:opacity-60 flex-shrink-0"
+                className="px-6 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-xs disabled:opacity-50 flex-shrink-0"
               >
-                {inviting ? 'Bağlantı Üretiliyor...' : 'Davet Et'}
+                {inviting ? 'Üretiliyor...' : 'Davet Et'}
               </button>
             </form>
 
             {generatedInviteLink && (
-              <div className="mt-5 p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50">
+              <div className="mt-6 p-5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08]">
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-xs font-semibold text-accent">
+                  <span className="text-xs font-medium text-[#0A0A0A] dark:text-white">
                     Davet Bağlantısı Hazır (7 Gün Geçerli)
                   </span>
                   <button
                     onClick={handleCopyLink}
-                    className="text-xs font-medium text-accent hover:underline flex items-center gap-1"
+                    className="text-xs font-medium text-[#0A0A0A] dark:text-white hover:underline flex items-center gap-1"
                   >
                     {copied ? '✓ Kopyalandı!' : 'Bağlantıyı Kopyala'}
                   </button>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-bg-light dark:bg-bg-dark text-[11px] font-mono text-text-secondary-light break-all select-all">
+                <div className="p-3 rounded-xl bg-white dark:bg-[#0A0A0A] text-[11px] font-mono text-black/60 dark:text-white/60 break-all select-all border border-black/[0.05] dark:border-white/[0.08]">
                   {generatedInviteLink}
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300">
+          <div className="p-5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] text-xs text-black/60 dark:text-white/60">
             Bu projenin yöneticisi (Owner) değilsiniz. Yeni üye davet etme yetkisi yalnızca proje sahibine aittir.
           </div>
         )}
 
         {/* Mevcut Üyeler Listesi */}
-        <div className="p-6 rounded-3xl bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark shadow-xs">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-8 rounded-3xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-sm">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-base font-bold">Proje Üyeleri</h2>
-              <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              <h2 className="font-serif text-2xl font-medium tracking-tight text-[#0A0A0A] dark:text-white">
+                Proje Üyeleri
+              </h2>
+              <p className="text-xs text-black/50 dark:text-white/50 mt-0.5">
                 Bu çalışma alanına erişimi olan kişiler ({members.length})
               </p>
             </div>
           </div>
 
           {loading ? (
-            <div className="p-8 text-center text-xs text-text-secondary-light animate-pulse">
+            <div className="p-8 text-center text-xs text-black/40 dark:text-white/40 animate-pulse">
               Üyeler yükleniyor...
             </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {members.map((m) => (
                 <MemberBadge
                   key={m.id}

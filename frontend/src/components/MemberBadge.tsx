@@ -23,19 +23,19 @@ export const MemberBadge: React.FC<MemberBadgeProps> = ({
     switch (role) {
       case 'owner':
         return (
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+          <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold bg-black/[0.06] dark:bg-white/[0.1] text-[#0A0A0A] dark:text-white border border-black/[0.08] dark:border-white/[0.12]">
             Sahip
           </span>
         );
       case 'editor':
         return (
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/60 text-accent dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+          <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold bg-black/[0.03] dark:bg-white/[0.05] text-black/70 dark:text-white/70 border border-black/[0.05] dark:border-white/[0.08]">
             Editör
           </span>
         );
       default:
         return (
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+          <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold bg-black/[0.02] dark:bg-white/[0.03] text-black/50 dark:text-white/50 border border-black/[0.04] dark:border-white/[0.06]">
             İzleyici
           </span>
         );
@@ -43,21 +43,21 @@ export const MemberBadge: React.FC<MemberBadgeProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-2xl bg-bg-light/60 dark:bg-bg-dark/60 border border-card-border-light dark:border-card-border-dark">
+    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950 text-accent flex items-center justify-center font-bold text-xs flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono text-xs font-bold flex items-center justify-center flex-shrink-0">
           {getInitials(member.display_name, member.email)}
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
+            <span className="text-xs font-semibold text-[#0A0A0A] dark:text-white truncate">
               {member.display_name || member.email.split('@')[0]}
             </span>
             {isCurrentUser && (
-              <span className="text-[10px] text-text-secondary-light dark:text-text-secondary-dark">(Siz)</span>
+              <span className="text-[10px] text-black/40 dark:text-white/40 font-mono">(Siz)</span>
             )}
           </div>
-          <p className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark truncate">
+          <p className="text-[11px] text-black/50 dark:text-white/50 truncate font-mono">
             {member.email}
           </p>
         </div>
@@ -69,7 +69,7 @@ export const MemberBadge: React.FC<MemberBadgeProps> = ({
           <button
             type="button"
             onClick={onRemove}
-            className="p-1 rounded-lg text-text-secondary-light hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 transition-colors"
+            className="p-1 rounded-full text-black/30 dark:text-white/30 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 transition-colors"
             title="Üyeyi Çıkar"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

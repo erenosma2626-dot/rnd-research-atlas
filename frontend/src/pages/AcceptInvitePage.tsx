@@ -52,11 +52,11 @@ export const AcceptInvitePage: React.FC<AcceptInvitePageProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-bg-light dark:bg-bg-dark transition-colors duration-200">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white transition-colors duration-200 font-sans">
       <div className="absolute top-6 right-6">
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl border border-card-border-light dark:border-card-border-dark bg-card-bg-light dark:bg-card-bg-dark text-text-secondary-light hover:text-text-primary-light transition-colors"
+          className="p-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
         >
           {isDark ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -70,43 +70,45 @@ export const AcceptInvitePage: React.FC<AcceptInvitePageProps> = ({
         </button>
       </div>
 
-      <div className="w-full max-w-md bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark rounded-3xl p-8 shadow-card text-center">
-        <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-accent flex items-center justify-center">
+      <div className="w-full max-w-md bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-center">
+        <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
           </svg>
         </div>
 
-        <h2 className="text-xl font-bold mb-1">Proje Daveti</h2>
+        <h2 className="font-serif text-2xl font-medium tracking-tight mb-1">Proje Daveti</h2>
 
         {loading ? (
-          <p className="text-xs text-text-secondary-light my-6 animate-pulse">Davet bilgileri yükleniyor...</p>
+          <p className="text-xs text-black/50 dark:text-white/50 my-6 animate-pulse">Davet bilgileri yükleniyor...</p>
         ) : errorMsg ? (
           <div className="my-6">
-            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600 mb-4">
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600 mb-4 font-mono">
               {errorMsg}
             </div>
             <button
               onClick={onNavigateHome}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-text-primary-light hover:bg-bg-light dark:hover:bg-bg-dark"
+              className="px-5 py-2 rounded-full text-xs font-medium border border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
             >
               Ana Sayfaya Dön
             </button>
           </div>
         ) : invite ? (
           <div className="my-6 space-y-4 text-left">
-            <div className="p-4 rounded-2xl bg-bg-light dark:bg-bg-dark border border-card-border-light dark:border-card-border-dark space-y-2">
+            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] space-y-2.5">
               <div className="flex justify-between text-xs">
-                <span className="text-text-secondary-light">Proje:</span>
-                <span className="font-bold">{invite.project_name}</span>
+                <span className="text-black/50 dark:text-white/50">Proje:</span>
+                <span className="font-medium font-serif text-sm">{invite.project_name}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-text-secondary-light">Atanan Rol:</span>
-                <span className="font-semibold text-accent capitalize">{invite.role === 'editor' ? 'Editör' : 'İzleyici'}</span>
+                <span className="text-black/50 dark:text-white/50">Atanan Rol:</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-black/[0.04] dark:bg-white/[0.08] text-[#0A0A0A] dark:text-white">
+                  {invite.role === 'editor' ? 'Editör' : 'İzleyici'}
+                </span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-text-secondary-light">Davet Edilen E-posta:</span>
-                <span className="font-mono text-[11px]">{invite.invited_email}</span>
+                <span className="text-black/50 dark:text-white/50">Davet Edilen:</span>
+                <span className="font-mono text-[11px] text-black/70 dark:text-white/70">{invite.invited_email}</span>
               </div>
             </div>
 
@@ -119,7 +121,7 @@ export const AcceptInvitePage: React.FC<AcceptInvitePageProps> = ({
             <button
               onClick={handleAccept}
               disabled={accepting}
-              className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all shadow-xs disabled:opacity-60"
+              className="w-full py-2.5 px-5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-xs disabled:opacity-50"
             >
               {accepting ? 'Katılınıyor...' : 'Daveti Kabul Et ve Projeye Katıl'}
             </button>

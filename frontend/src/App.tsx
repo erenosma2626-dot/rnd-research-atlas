@@ -3,18 +3,23 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { DEFAULT_PROJECT_ID } from './api/client';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { CanvasPage } from './pages/CanvasPage';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProjectListPage } from './pages/ProjectListPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 import { ReportPage } from './pages/ReportPage';
-import { SignupPage } from './pages/SignupPage';
 import { UploadPage } from './pages/UploadPage';
 import { ThemeProvider } from './theme/ThemeContext';
 
 function AuthenticatedApp() {
   const { user, loading } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+
+  // Unauthenticated routing: 'landing' or 'login'
+  const [unauthView, setUnauthView] = useState<'landing' | 'login'>(() => {
+    const path = window.location.pathname;
+    return path === '/login' ? 'login' : 'landing';
+  });
 
   // URL path'inden davet token'ı yakalama (/invite/:token)
   const [inviteToken, setInviteToken] = useState<string | null>(() => {
@@ -46,22 +51,59 @@ function AuthenticatedApp() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-bg-light dark:bg-bg-dark">
-        <div className="text-xs text-text-secondary-light dark:text-text-secondary-dark animate-pulse">
+      <div className="min-h-screen w-full flex items-center justify-center bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white">
+        <div className="text-xs text-black/50 dark:text-white/50 font-mono animate-pulse">
           Oturum kontrol ediliyor...
         </div>
       </div>
     );
   }
 
+  // 1. Ziyaretçi (Giriş Yapılmamış) Durumu:
   if (!user) {
-    return authView === 'signup' ? (
-      <SignupPage onNavigateToLogin={() => setAuthView('login')} />
-    ) : (
-      <LoginPage onNavigateToSignup={() => setAuthView('signup')} />
+    if (inviteToken) {
+      return (
+        <AcceptInvitePage
+          inviteToken={inviteToken}
+          onAcceptSuccess={(projectId, projectName) => {
+            window.history.pushState({}, '', '/');
+            setInviteToken(null);
+            setActiveProjectId(projectId);
+            setActiveProjectName(projectName);
+            setActiveUserRole('editor');
+            setCurrentView('project');
+          }}
+          onNavigateHome={() => {
+            window.history.pushState({}, '', '/');
+            setInviteToken(null);
+            setUnauthView('landing');
+          }}
+        />
+      );
+    }
+
+    if (unauthView === 'login') {
+      return (
+        <LoginPage
+          onNavigateHome={() => {
+            window.history.pushState({}, '', '/');
+            setUnauthView('landing');
+          }}
+        />
+      );
+    }
+
+    return (
+      <LandingPage
+        onNavigateLogin={() => {
+          window.history.pushState({}, '', '/login');
+          setUnauthView('login');
+        }}
+      />
     );
   }
 
+  // 2. Giriş Yapmış Kullanıcı (Uygulama İçi Rotalar):
   const handleSelectProject = (projectId: string, projectName: string, userRole: string) => {
     setActiveProjectId(projectId);
     setActiveProjectName(projectName);

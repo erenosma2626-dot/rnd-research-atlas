@@ -40,6 +40,7 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
 
   const fetchDocuments = async () => {
     try {
+      setLoading(true);
       const data = await listProjectDocuments(projectId);
       setDocuments(data);
       setError(null);
@@ -53,7 +54,6 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
   useEffect(() => {
     fetchDocuments();
 
-    // Devam eden işlem varsa 3 saniyede bir otomatik güncelle
     const interval = setInterval(() => {
       listProjectDocuments(projectId)
         .then((data) => setDocuments(data))
@@ -91,30 +91,30 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-200">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-bg-light/80 dark:bg-bg-dark/80 border-b border-card-border-light dark:border-card-border-dark">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white transition-colors duration-200 font-sans">
+      {/* Top Sticky Glassmorphic Navbar */}
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-[#0A0A0A]/80 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {onNavigateProjectsList && (
               <button
                 onClick={onNavigateProjectsList}
-                className="p-2 rounded-xl text-text-secondary-light hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-colors"
+                className="p-2 rounded-full border border-black/[0.06] dark:border-white/[0.08] text-black/50 dark:text-white/50 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
                 title="Tüm Projelere Dön"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
             )}
 
-            <div className="w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center font-bold text-base shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono flex items-center justify-center font-bold text-xs">
               {projectName.substring(0, 1).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-base font-semibold">{projectName}</h1>
-              <div className="flex items-center gap-1.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                <span>Rolünüz: <strong className="capitalize text-text-primary-light dark:text-text-primary-dark">{userRole === 'owner' ? 'Sahip' : userRole === 'editor' ? 'Editör' : 'İzleyici'}</strong></span>
+              <h1 className="text-sm font-semibold tracking-tight">{projectName}</h1>
+              <div className="flex items-center gap-1.5 text-xs text-black/50 dark:text-white/50">
+                <span>Rol: <strong className="font-medium text-[#0A0A0A] dark:text-white">{userRole === 'owner' ? 'Sahip' : userRole === 'editor' ? 'Editör' : 'İzleyici'}</strong></span>
               </div>
             </div>
           </div>
@@ -124,23 +124,23 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
             {onNavigateSettings && (
               <button
                 onClick={onNavigateSettings}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-card-border-light dark:border-card-border-dark text-xs font-medium text-text-secondary-light hover:text-text-primary-light hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-all shadow-xs"
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all shadow-xs"
                 title="Üye Yönetimi ve Proje Ayarları"
               >
-                <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 text-black/60 dark:text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                Üyeler & Ayarlar
+                Üyeler
               </button>
             )}
 
-            {/* Canvas'ı Aç Button */}
+            {/* Canvas'ı Aç Button (Pill Primary/Secondary) */}
             <button
               onClick={handleOpenCanvasClick}
               disabled={loadingCanvas}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-card-border-light dark:border-card-border-dark text-xs font-medium text-text-primary-light dark:text-text-primary-dark hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-all shadow-xs"
+              className="flex items-center gap-2 px-5 py-2 rounded-full border border-black/[0.12] dark:border-white/[0.16] text-xs font-medium bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-[#0A0A0A] dark:text-white transition-all shadow-xs"
             >
-              <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -148,18 +148,18 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
                   d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
                 />
               </svg>
-              {loadingCanvas ? 'Canvas Yükleniyor...' : 'Canvas Görünümü'}
+              {loadingCanvas ? 'Yükleniyor...' : 'Canvas'}
             </button>
 
             {/* User info & Logout */}
             {user && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark text-xs">
-                <span className="text-text-secondary-light dark:text-text-secondary-dark truncate max-w-[140px]" title={user.email}>
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08] text-xs">
+                <span className="text-black/60 dark:text-white/60 truncate max-w-[140px] font-mono text-[11px]" title={user.email}>
                   {user.email}
                 </span>
                 <button
                   onClick={logout}
-                  className="text-rose-600 hover:text-rose-700 font-medium hover:underline ml-1"
+                  className="text-black/40 dark:text-white/40 hover:text-rose-600 dark:hover:text-rose-400 font-medium ml-1 transition-colors"
                   title="Çıkış Yap"
                 >
                   Çıkış
@@ -170,7 +170,7 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-card-border-light dark:border-card-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-colors"
+              className="p-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
               title={isDark ? 'Açık Mod' : 'Koyu Mod'}
             >
               {isDark ? (
@@ -198,12 +198,14 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
       </header>
 
       {/* Main Grid Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
           <div>
-            <h2 className="text-xl font-bold">Proje Dokümanları</h2>
-            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
+            <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-[#0A0A0A] dark:text-white leading-[1.1]">
+              Proje Dokümanları
+            </h2>
+            <p className="text-sm text-black/50 dark:text-white/50 mt-2">
               Bu projede analiz edilmiş veya sıraya alınmış tüm akademik makaleler
             </p>
           </div>
@@ -211,7 +213,7 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
           {userRole !== 'viewer' && (
             <button
               onClick={onNavigateUpload}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all shadow-xs self-start sm:self-auto"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-sm self-start sm:self-auto"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -228,28 +230,28 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
 
         {/* State Views */}
         {loading ? (
-          <div className="p-16 text-center text-xs text-text-secondary-light animate-pulse">
+          <div className="p-16 text-center text-xs text-black/40 dark:text-white/40 animate-pulse">
             Dokümanlar yükleniyor...
           </div>
         ) : error ? (
-          <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600">
+          <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600 font-mono">
             {error}
           </div>
         ) : documents.length === 0 ? (
-          <div className="p-16 text-center bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark rounded-3xl">
-            <h3 className="text-sm font-semibold mb-1">Bu projede henüz doküman bulunmuyor</h3>
-            <p className="text-xs text-text-secondary-light mb-4">Yeni bir akademik makale (PDF) yükleyerek otomatik analizi başlatın.</p>
+          <div className="p-16 text-center bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl">
+            <h3 className="font-serif text-xl font-medium mb-1">Bu projede henüz doküman bulunmuyor</h3>
+            <p className="text-xs text-black/50 dark:text-white/50 mb-6">Yeni bir akademik makale (PDF) yükleyerek otomatik analizi başlatın.</p>
             {userRole !== 'viewer' && (
               <button
                 onClick={onNavigateUpload}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all shadow-xs"
+                className="px-6 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-sm"
               >
                 + Doküman Yükle
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {documents.map((doc) => (
               <DocumentCard
                 key={doc.id}

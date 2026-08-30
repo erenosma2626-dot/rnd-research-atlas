@@ -63,10 +63,13 @@ def test_async_process_document_success():
          patch("app.worker.tasks.index_document"), \
          patch("app.worker.tasks.route_sections", return_value=[]), \
          patch("app.worker.tasks.fill_all_sections", return_value=[mock_filled_section]), \
-         patch("app.worker.tasks.async_session_factory") as mock_session_factory:
+         patch("app.worker.tasks._get_worker_db_session") as mock_get_db:
 
         mock_session = AsyncMock()
-        mock_session_factory.return_value.__aenter__.return_value = mock_session
+        mock_factory = MagicMock()
+        mock_factory.return_value.__aenter__.return_value = mock_session
+        mock_engine = AsyncMock()
+        mock_get_db.return_value = (mock_engine, mock_factory)
 
         with patch("app.worker.tasks.DocumentRepository") as mock_doc_repo_cls, \
              patch("app.worker.tasks.ReportRepository") as mock_rep_repo_cls, \
@@ -86,7 +89,7 @@ def test_async_process_document_success():
 
             asyncio.run(_async_process_document(doc_id, "/tmp/sample.pdf", project_id))
 
-            mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "processing")
+            mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "parsing")
             mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "done")
             mock_sec_repo.create_many.assert_called_once()
 

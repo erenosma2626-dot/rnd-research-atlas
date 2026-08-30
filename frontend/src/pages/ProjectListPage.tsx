@@ -58,17 +58,17 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
   };
 
   return (
-    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-200">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-bg-light/80 dark:bg-bg-dark/80 border-b border-card-border-light dark:border-card-border-dark">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white transition-colors duration-200 font-sans">
+      {/* Top Sticky Glassmorphic Navbar */}
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-[#0A0A0A]/80 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center font-bold text-base shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] flex items-center justify-center font-bold text-sm shadow-xs">
               A
             </div>
             <div>
-              <h1 className="text-base font-semibold">rnd-paper-canvas</h1>
-              <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              <h1 className="text-sm font-semibold tracking-tight">rnd-paper-canvas</h1>
+              <p className="text-[11px] text-black/50 dark:text-white/50">
                 Araştırma Çalışma Alanları
               </p>
             </div>
@@ -76,13 +76,13 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
 
           <div className="flex items-center gap-3">
             {user && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark text-xs">
-                <span className="text-text-secondary-light dark:text-text-secondary-dark truncate max-w-[150px]" title={user.email}>
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08] text-xs">
+                <span className="text-black/60 dark:text-white/60 truncate max-w-[160px] font-mono" title={user.email}>
                   {user.email}
                 </span>
                 <button
                   onClick={logout}
-                  className="text-rose-600 hover:text-rose-700 font-medium hover:underline ml-1"
+                  className="text-black/40 dark:text-white/40 hover:text-rose-600 dark:hover:text-rose-400 font-medium ml-1 transition-colors"
                 >
                   Çıkış
                 </button>
@@ -91,7 +91,7 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-card-border-light dark:border-card-border-dark text-text-secondary-light hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-colors"
+              className="p-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
               title={isDark ? 'Açık Mod' : 'Koyu Mod'}
             >
               {isDark ? (
@@ -109,20 +109,20 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <main className="max-w-6xl mx-auto px-6 py-12">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
           <div>
-            <h2 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+            <h2 className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-[#0A0A0A] dark:text-white leading-[1.08]">
               Projeleriniz
             </h2>
-            <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
+            <p className="text-sm text-black/55 dark:text-white/55 mt-2">
               Birlikte çalıştığınız ve sahibi olduğunuz tüm araştırma projeleri
             </p>
           </div>
 
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all shadow-xs self-start sm:self-auto"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-sm self-start sm:self-auto"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -132,58 +132,52 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
         </div>
 
         {loading ? (
-          <div className="p-16 text-center text-xs text-text-secondary-light animate-pulse">
+          <div className="p-16 text-center text-xs text-black/40 dark:text-white/40 animate-pulse">
             Projeler yükleniyor...
           </div>
         ) : error ? (
-          <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600">
+          <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600 font-mono">
             {error}
           </div>
         ) : projects.length === 0 ? (
-          <div className="p-16 text-center bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark rounded-3xl">
-            <h3 className="text-sm font-semibold mb-1">Henüz bir projeniz yok</h3>
-            <p className="text-xs text-text-secondary-light mb-4">İlk projenizi oluşturarak doküman yüklemeye ve analiz yapmaya başlayın.</p>
+          <div className="p-16 text-center bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl">
+            <h3 className="font-serif text-xl font-medium mb-1">Henüz bir projeniz yok</h3>
+            <p className="text-xs text-black/50 dark:text-white/50 mb-6">İlk projenizi oluşturarak doküman yüklemeye ve analiz yapmaya başlayın.</p>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all shadow-xs"
+              className="px-6 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-sm"
             >
               + Proje Oluştur
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((p) => (
               <div
                 key={p.id}
                 onClick={() => onSelectProject(p.id, p.name, p.role)}
-                className="group relative flex flex-col justify-between p-5 rounded-3xl bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark hover:border-accent/60 shadow-xs hover:shadow-card cursor-pointer transition-all duration-200"
+                className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:-translate-y-0.5 cursor-pointer transition-all duration-200"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950 text-accent flex items-center justify-center font-bold text-sm">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono flex items-center justify-center font-bold text-sm">
                       {p.name.substring(0, 2).toUpperCase()}
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                      p.role === 'owner'
-                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
-                        : p.role === 'editor'
-                        ? 'bg-blue-50 dark:bg-blue-950/60 text-accent dark:text-blue-300 border-blue-200 dark:border-blue-800/60'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
-                    }`}>
+                    <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold border bg-black/[0.03] dark:bg-white/[0.05] text-black/70 dark:text-white/70 border-black/[0.06] dark:border-white/[0.1]">
                       {p.role === 'owner' ? 'Sahip' : p.role === 'editor' ? 'Editör' : 'İzleyici'}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark group-hover:text-accent transition-colors truncate">
+                  <h3 className="font-serif text-lg font-medium text-[#0A0A0A] dark:text-white tracking-tight truncate">
                     {p.name}
                   </h3>
                 </div>
 
-                <div className="mt-6 pt-3 border-t border-card-border-light/60 dark:border-card-border-dark/60 flex items-center justify-between text-xs text-text-secondary-light">
-                  <span>{new Date(p.created_at).toLocaleDateString('tr-TR')}</span>
-                  <span className="text-accent font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                    Çalışma Alanına Git &rarr;
+                <div className="mt-8 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs text-black/50 dark:text-white/50">
+                  <span className="font-mono text-[11px]">{new Date(p.created_at).toLocaleDateString('tr-TR')}</span>
+                  <span className="text-[#0A0A0A] dark:text-white font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform text-xs">
+                    Aç &rarr;
                   </span>
                 </div>
               </div>
@@ -195,12 +189,12 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
       {/* Yeni Proje Modalı */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-card-bg-light dark:bg-card-bg-dark rounded-3xl border border-card-border-light dark:border-card-border-dark p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold">Yeni Proje Oluştur</h3>
+          <div className="w-full max-w-md bg-white dark:bg-[#141414] rounded-3xl border border-black/[0.08] dark:border-white/[0.12] p-7 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-serif text-xl font-medium tracking-tight">Yeni Proje Oluştur</h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1 rounded-lg text-text-secondary-light hover:bg-bg-light dark:hover:bg-bg-dark"
+                className="p-1 rounded-full text-black/40 dark:text-white/40 hover:bg-black/5 dark:hover:bg-white/10"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -210,7 +204,7 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
 
             <form onSubmit={handleCreateProject} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1.5">
+                <label className="block text-xs font-medium text-black/60 dark:text-white/60 mb-1.5">
                   Proje Adı
                 </label>
                 <input
@@ -219,12 +213,12 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder="Örn: LLM Akıl Yürütme ve Karşılaştırma"
                   required
-                  className="w-full px-3.5 py-2 rounded-xl text-xs bg-bg-light dark:bg-bg-dark border border-card-border-light dark:border-card-border-dark outline-none focus:border-accent"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark mb-1.5">
+                <label className="block text-xs font-medium text-black/60 dark:text-white/60 mb-1.5">
                   Açıklama (Opsiyonel)
                 </label>
                 <textarea
@@ -232,22 +226,22 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
                   onChange={(e) => setNewProjectDesc(e.target.value)}
                   placeholder="Projenin amacı veya konusu..."
                   rows={3}
-                  className="w-full px-3.5 py-2 rounded-xl text-xs bg-bg-light dark:bg-bg-dark border border-card-border-light dark:border-card-border-dark outline-none focus:border-accent resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30 resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-text-secondary-light hover:bg-bg-light dark:hover:bg-bg-dark"
+                  className="px-4 py-2 rounded-full text-xs font-medium text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/10"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-accent hover:bg-accent-hover transition-all disabled:opacity-60 shadow-xs"
+                  className="px-5 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all disabled:opacity-50 shadow-xs"
                 >
                   {creating ? 'Oluşturuluyor...' : 'Oluştur'}
                 </button>
