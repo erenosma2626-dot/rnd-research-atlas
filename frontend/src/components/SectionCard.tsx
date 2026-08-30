@@ -1,8 +1,10 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, FileText, List as ListIcon, Table as TableIcon } from 'lucide-react';
+import { BarChart3, BookOpen, FileText, Image as ImageIcon, List as ListIcon, Table as TableIcon } from 'lucide-react';
 import { FilledSection, GeneratedDiagram } from '../api/client';
 import { DiagramView } from './DiagramView';
+import { ImageGallerySection } from './ImageGallerySection';
+import { ChartSection } from './ChartSection';
 
 interface SectionCardProps {
   section: FilledSection;
@@ -17,6 +19,10 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
         return <TableIcon className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
       case 'list':
         return <ListIcon className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
+      case 'image_gallery':
+        return <ImageIcon className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
+      case 'chart':
+        return <BarChart3 className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
       default:
         return <FileText className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
     }
@@ -43,7 +49,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
           </div>
         </div>
 
-        {/* Source References (Micro-interaction: hover opacity transition) */}
+        {/* Source References */}
         {section.sources && section.sources.length > 0 && (
           <div className="flex flex-wrap gap-1.5 items-center opacity-80 group-hover:opacity-100 transition-opacity duration-200">
             <BookOpen className="w-3.5 h-3.5 text-black/40 dark:text-white/40" />
@@ -103,6 +109,18 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {section.content_type === 'image_gallery' && (
+          <div className="my-2">
+            <ImageGallerySection images={section.content?.images || []} />
+          </div>
+        )}
+
+        {section.content_type === 'chart' && (
+          <div className="my-2">
+            <ChartSection data={section.content as any} />
           </div>
         )}
 

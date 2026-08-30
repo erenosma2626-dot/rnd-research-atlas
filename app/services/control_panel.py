@@ -74,7 +74,7 @@ def build_control_panel_state(
                 included=True,
                 order=idx,
                 diagram_available=is_diagram_eligible,
-                diagram_included=sec.diagram_requested,
+                diagram_included=True if is_diagram_eligible else sec.diagram_requested,
                 content_preview=preview,
             )
         )

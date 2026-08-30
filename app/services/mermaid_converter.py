@@ -12,27 +12,19 @@ def sanitize_node_id(raw_id: str) -> str:
 
 def sanitize_label(raw_label: str) -> str:
     """Mermaid düğüm ve ok etiketlerindeki tırnakları ve özel karakterleri güvenli hale getirir."""
-    # Çift tırnakları tek tırnağa çevir ve satır sonlarını temizle
     clean_label = raw_label.replace('"', "'").replace("\n", " ").strip()
     return clean_label
 
 
 def spec_to_mermaid(spec: DiagramSpec) -> str:
-    """DiagramSpec JSON nesnesini deterministik olarak Mermaid.js koduna dönüştürür.
-
-    SAF FONKSİYONDUR: LLM çağrısı içermez, sıfır syntax hatası garantisi sağlar.
-
-    Args:
-        spec: Düğümleri, kenarları ve diyagram türünü içeren spesifikasyon.
-
-    Returns:
-        str: Render edilmeye hazır Mermaid kodu.
-    """
+    """DiagramSpec JSON nesnesini deterministik olarak Mermaid.js koduna dönüştürür."""
     lines: list[str] = []
 
     # 1. Diyagram başlığı
     if spec.diagram_type == "tree":
         lines.append("graph TD")
+    elif spec.diagram_type == "flowchart_decision":
+        lines.append("flowchart TD")
     else:
         lines.append("flowchart TD")
 
@@ -42,7 +34,14 @@ def spec_to_mermaid(spec: DiagramSpec) -> str:
         clean_id = sanitize_node_id(node.id)
         node_id_map[node.id] = clean_id
         clean_label = sanitize_label(node.label)
-        lines.append(f'    {clean_id}["{clean_label}"]')
+
+        # Karar ağacı için diamond düğüm kontrolü
+        if spec.diagram_type == "flowchart_decision" and (
+            "?" in clean_label or "mi" in clean_label.lower() or "karar" in clean_label.lower() or "seçim" in clean_label.lower()
+        ):
+            lines.append(f'    {clean_id}{{"{clean_label}"}}')
+        else:
+            lines.append(f'    {clean_id}["{clean_label}"]')
 
     # 3. Kenarların (bağlantıların) eklenmesi
     for edge in spec.edges:

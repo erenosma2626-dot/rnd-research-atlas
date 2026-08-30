@@ -118,6 +118,7 @@ class Section(Base):
     content: Mapped[dict] = mapped_column(JSON, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     diagram: Mapped[Optional[dict]] = mapped_column(JSON, default=None, nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
 
     # İlişkiler
     report: Mapped["Report"] = relationship("Report", back_populates="sections")
@@ -187,14 +188,15 @@ class Canvas(Base):
 
 
 class CanvasItem(Base):
-    """Canvas üzerindeki tekil elemanlar (doküman kutucuğu, not, bağlantı)."""
+    """Canvas üzerindeki tekil elemanlar (doküman kutucuğu, section kutucuğu, not, yapışkan not, şekil, çizim, bağlantı)."""
 
     __tablename__ = "canvas_items"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     canvas_id: Mapped[UUID] = mapped_column(ForeignKey("canvases.id", ondelete="CASCADE"), nullable=False, index=True)
-    item_type: Mapped[str] = mapped_column(String(50), nullable=False)  # document_box, note, connection
-    ref_id: Mapped[Optional[UUID]] = mapped_column(default=None, nullable=True)  # document_box ise Document.id
+    item_type: Mapped[str] = mapped_column(String(50), nullable=False)  # document_box, section_box, note, sticky_note, connection, shape, drawing, image
+    ref_id: Mapped[Optional[UUID]] = mapped_column(default=None, nullable=True)  # Document.id veya Section.id
+    ref_type: Mapped[Optional[str]] = mapped_column(String(50), default=None, nullable=True)  # "document" | "section"
     position_x: Mapped[float] = mapped_column(default=0.0, nullable=False)
     position_y: Mapped[float] = mapped_column(default=0.0, nullable=False)
     content: Mapped[Optional[dict]] = mapped_column(JSON, default=None, nullable=True)

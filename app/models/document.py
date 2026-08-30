@@ -1,5 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, Field
+from app.models.figure import ExtractedFigure
 
 
 class Section(BaseModel):
@@ -38,6 +39,9 @@ class ParsedDocument(BaseModel):
     )
     formulas: list[Formula] = Field(
         default_factory=list, description="List of extracted formulas"
+    )
+    figures: list[ExtractedFigure] = Field(
+        default_factory=list, description="List of extracted figures and diagrams"
     )
     raw_markdown: str = Field(
         ..., description="Complete raw markdown export of the document"

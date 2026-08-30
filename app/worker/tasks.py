@@ -49,10 +49,19 @@ async def _async_process_document(document_id: str, file_path: str, project_id: 
             section_repo = SectionRepository(session)
 
             try:
-                # 1. Aşama: parsing (Docling PDF ayrıştırma)
+                # 1. Aşama: parsing (Docling PDF ayrıştırma & Figür çıkarma)
                 await doc_repo.update_status(doc_uuid, "parsing")
                 await session.commit()
                 parsed_doc = parse_pdf(file_path)
+
+                # Figürleri / şemaları ayıkla
+                try:
+                    from app.services.figure_extractor import extract_figures
+                    figures = extract_figures(file_path, document_id)
+                    parsed_doc.figures = figures
+                except Exception as fig_err:
+                    logger.warning(f"Figür çıkarma hatası: {fig_err}")
+                    parsed_doc.figures = []
 
                 # 2. Aşama: extracting_formulas (Formül çıkarma)
                 await doc_repo.update_status(doc_uuid, "extracting_formulas")
@@ -67,6 +76,8 @@ async def _async_process_document(document_id: str, file_path: str, project_id: 
                 await doc_repo.update_status(doc_uuid, "classifying")
                 await session.commit()
                 profile = classify_paper(parsed_doc)
+                if len(parsed_doc.figures) > 0:
+                    profile.has_extractable_figures = True
 
                 # 4. Aşama: indexing (ChromaDB vektör indeksleme & rota belirleme)
                 await doc_repo.update_status(doc_uuid, "indexing")

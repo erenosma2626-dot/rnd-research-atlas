@@ -184,14 +184,81 @@ class SectionRepository:
         return created_sections
 
     async def get_by_report(self, report_id: UUID) -> list[Section]:
-        """Rapor kimliğine göre sıralanmış bölümleri döner."""
+        """Rapor kimliğine göre sıralanmış aktif bölümleri döner."""
         stmt = (
             select(Section)
-            .where(Section.report_id == report_id)
+            .where(Section.report_id == report_id, Section.deleted_at.is_(None))
             .order_by(Section.order)
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def create(
+        self,
+        report_id: UUID,
+        title: str,
+        section_type: str,
+        content: dict[str, Any],
+        order: int = 1,
+    ) -> Section:
+        """Yeni bir bölüm oluşturur."""
+        sec = Section(
+            id=uuid4(),
+            report_id=report_id,
+            title=title,
+            section_type=section_type,
+            content=content,
+            order=order,
+        )
+        self.session.add(sec)
+        await self.session.flush()
+        return sec
+
+    async def get_by_id(self, section_id: UUID) -> Optional[Section]:
+        """Kimliğe göre bölümü döner."""
+        stmt = select(Section).where(Section.id == section_id, Section.deleted_at.is_(None))
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update(
+        self,
+        section_id: UUID,
+        title: Optional[str] = None,
+        content: Optional[dict[str, Any]] = None,
+        order: Optional[int] = None,
+    ) -> Optional[Section]:
+        """Bölüm başlık, içerik veya sırasını günceller."""
+        values: dict[str, Any] = {}
+        if title is not None:
+            values["title"] = title
+        if content is not None:
+            values["content"] = content
+        if order is not None:
+            values["order"] = order
+
+        if not values:
+            return await self.get_by_id(section_id)
+
+        stmt = (
+            update(Section)
+            .where(Section.id == section_id, Section.deleted_at.is_(None))
+            .values(**values)
+            .returning(Section)
+        )
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.scalar_one_or_none()
+
+    async def delete(self, section_id: UUID) -> bool:
+        """Bölümü soft-delete ile siler."""
+        stmt = (
+            update(Section)
+            .where(Section.id == section_id, Section.deleted_at.is_(None))
+            .values(deleted_at=utc_now())
+        )
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0
 
 
 class CanvasRepository:

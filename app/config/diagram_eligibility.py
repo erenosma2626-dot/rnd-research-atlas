@@ -6,4 +6,5 @@ DIAGRAM_ELIGIBLE_GROUPS = {
     "algorithm_section": "flowchart",  # algoritma akışı
     "survey_taxonomy": "tree",  # taksonomi ağacı
     "optimization_formulation": "flowchart",  # optimizasyon akışı
+    "decision_tree": "flowchart_decision",  # karar ağacı / karar düğümleri (diamond)
 }

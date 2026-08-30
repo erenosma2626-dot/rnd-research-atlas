@@ -49,7 +49,7 @@ export interface GeneratedDiagram {
 export interface FilledSection {
   group_id: string;
   title: string;
-  content_type: 'prose' | 'table' | 'list' | 'error';
+  content_type: 'prose' | 'table' | 'list' | 'image_gallery' | 'chart' | 'error';
   content: Record<string, any>;
   sources: SourceReference[];
   diagram_requested: boolean;
@@ -642,3 +642,49 @@ export async function addExistingDocumentToProject(
   }
   return res.json();
 }
+
+// 24. Manuel Yeni Section Ekleme
+export async function createReportSection(
+  reportId: string,
+  data: { title: string; content_type: string; content: Record<string, any>; order?: number }
+): Promise<any> {
+  const res = await authFetch(`${API_BASE_URL}/reports/${reportId}/sections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Bölüm oluşturulamadı' }));
+    throw new Error(err.detail || 'Bölüm oluşturulamadı');
+  }
+  return res.json();
+}
+
+// 25. Section Güncelleme
+export async function updateReportSection(
+  sectionId: string,
+  data: { title?: string; content?: Record<string, any>; order?: number }
+): Promise<any> {
+  const res = await authFetch(`${API_BASE_URL}/sections/${sectionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Bölüm güncellenemedi' }));
+    throw new Error(err.detail || 'Bölüm güncellenemedi');
+  }
+  return res.json();
+}
+
+// 26. Section Silme
+export async function deleteReportSection(sectionId: string): Promise<void> {
+  const res = await authFetch(`${API_BASE_URL}/sections/${sectionId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Bölüm silinemedi' }));
+    throw new Error(err.detail || 'Bölüm silinemedi');
+  }
+}
+

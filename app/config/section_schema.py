@@ -25,7 +25,28 @@ SECTION_GROUPS = [
             "has_evaluation_metrics",
             "has_baseline_comparison",
         ],
-        "trigger_mode": "any",  # Bu flag'lerden EN AZ BİRİ true ise grup aktif olur
+        "trigger_mode": "any",
+    },
+    {
+        "group_id": "quantitative_results",
+        "title": "Sayısal Sonuçlar & Grafik",
+        "always_active": False,
+        "trigger_flags": ["has_evaluation_metrics", "has_baseline_comparison"],
+        "trigger_mode": "any",
+    },
+    {
+        "group_id": "paper_figures",
+        "title": "Makale Görselleri & Şemalar",
+        "always_active": False,
+        "trigger_flags": ["has_extractable_figures"],
+        "trigger_mode": "any",
+    },
+    {
+        "group_id": "decision_tree",
+        "title": "Karar Ağacı / Seçim Rehberi",
+        "always_active": False,
+        "trigger_flags": ["has_decision_workflow"],
+        "trigger_mode": "any",
     },
     {
         "group_id": "theorem_proofs",
