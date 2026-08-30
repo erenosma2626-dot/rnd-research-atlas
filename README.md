@@ -2,9 +2,9 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Step 1: Docling PDF Parser** ve **Step 2: PaperProfile Classifier** aşamalarını içerir:
+Bu repo **Step 1: Docling PDF Parser** ve **Step 2: PaperProfile Classifier (Groq + Llama 3.3 70B)** aşamalarını içerir:
 1. **Docling Parser:** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
-2. **PaperProfile Classifier:** Düşük token/maliyet kontrolü ile doküman iskeletini (özet + başlık hiyerarşisi + formül metrikleri) tek seferlik LLM çağrısıyla analiz ederek 17 bağımsız içerik bayrağı (Matematik, ML/AI/DS, Yapısal), birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
+2. **PaperProfile Classifier (Groq):** Düşük token maliyetiyle doküman iskeletini (özet + başlık hiyerarşisi + formül metrikleri) tek seferlik Groq API çağrısıyla (`llama-3.3-70b-versatile`) analiz ederek 17 bağımsız içerik bayrağı (Matematik, ML/AI/DS, Yapısal), birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır. Token harcamaları `logs/llm_calls.jsonl` dosyasına kaydedilir.
 
 ---
 
@@ -20,27 +20,14 @@ source .venv/bin/activate
 # Bağımlılıkları yükleme
 pip install -r requirements.txt
 
-# Ortam değişkenleri (.env) yapılandırması
+# Ortam değişkenleri şablonundan .env oluşturma
 cp .env.example .env
 ```
 
----
-
-## ⚙️ Yapılandırma (`.env`)
-
+`.env` dosyanıza kendi Groq API anahtarınızı ekleyin:
 ```env
-# LLM Sağlayıcısı: ollama | openai | anthropic
-LLM_PROVIDER=ollama
-
-# Ollama Ayarları
-OLLAMA_MODEL=llama3.2
-OLLAMA_BASE_URL=http://localhost:11434
-
-# Bulut Sağlayıcıları (LLM_PROVIDER=openai veya anthropic seçildiğinde)
-# OPENAI_API_KEY=sk-...
-# OPENAI_MODEL=gpt-4o-mini
-# ANTHROPIC_API_KEY=sk-ant-...
-# ANTHROPIC_MODEL=claude-3-5-haiku-latest
+GROQ_API_KEY=gsk_...
+GROQ_CLASSIFY_MODEL=llama-3.3-70b-versatile
 ```
 
 ---

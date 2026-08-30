@@ -1,4 +1,7 @@
+from datetime import datetime, timezone
 import io
+import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 import pytest
@@ -7,7 +10,13 @@ from pydantic import ValidationError
 from app.main import app
 from app.models.document import Formula, ParsedDocument, Section
 from app.models.paper_profile import PaperProfile
-from app.services.classifier import build_classification_input, classify_paper
+from app.services.classifier import (
+    LLMCallLog,
+    build_classification_input,
+    classify_paper,
+    get_instructor_client,
+    log_llm_call,
+)
 
 client = TestClient(app)
 
@@ -75,13 +84,11 @@ def test_paper_profile_validation(sample_paper_profile):
     assert sample_paper_profile.has_ml_experiment is True
     assert sample_paper_profile.primary_domain == "machine learning optimization"
 
-    # Confidence 1.0'dan büyük olamaz
     with pytest.raises(ValidationError):
         PaperProfile(
             **{**sample_paper_profile.model_dump(), "confidence": 1.5}
         )
 
-    # Confidence 0.0'dan küçük olamaz
     with pytest.raises(ValidationError):
         PaperProfile(
             **{**sample_paper_profile.model_dump(), "confidence": -0.1}
@@ -100,12 +107,41 @@ def test_build_classification_input(sample_parsed_document):
     assert "novel optimization method" in prompt_input
 
 
+def test_get_instructor_client_missing_key(monkeypatch):
+    """GROQ_API_KEY yoksa açık hata fırlatıldığını test eder."""
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    with pytest.raises(ValueError) as exc_info:
+        get_instructor_client()
+    assert "GROQ_API_KEY" in str(exc_info.value)
+
+
+def test_log_llm_call(tmp_path):
+    """LLMCallLog ve log_llm_call fonksiyonunu test eder."""
+    log_file = tmp_path / "test_llm_calls.jsonl"
+    entry = LLMCallLog(
+        call_type="classification",
+        model="llama-3.3-70b-versatile",
+        input_tokens=150,
+        output_tokens=45,
+    )
+    log_llm_call(entry, log_file=str(log_file))
+
+    assert log_file.exists()
+    with open(log_file, "r") as f:
+        line = f.readline()
+        data = json.loads(line)
+        assert data["call_type"] == "classification"
+        assert data["model"] == "llama-3.3-70b-versatile"
+        assert data["input_tokens"] == 150
+        assert data["output_tokens"] == 45
+
+
 @patch("app.services.classifier.get_instructor_client")
-def test_classify_paper_success(mock_get_client, sample_parsed_document, sample_paper_profile):
+def test_classify_paper_success(mock_get_client, sample_parsed_document, sample_paper_profile, tmp_path):
     """classify_paper fonksiyonunun başarılı LLM çağrısını test eder."""
     mock_client = MagicMock()
     mock_client.chat.completions.create.return_value = sample_paper_profile
-    mock_get_client.return_value = (mock_client, "llama3.2")
+    mock_get_client.return_value = (mock_client, "llama-3.3-70b-versatile")
 
     result = classify_paper(sample_parsed_document)
     assert result == sample_paper_profile
@@ -117,8 +153,8 @@ def test_classify_paper_success(mock_get_client, sample_parsed_document, sample_
 def test_classify_paper_failure_raises_runtime_error(mock_get_client, sample_parsed_document):
     """classify_paper'ın sessizce default dönmeyip hata fırlattığını test eder."""
     mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = Exception("LLM connection error")
-    mock_get_client.return_value = (mock_client, "llama3.2")
+    mock_client.chat.completions.create.side_effect = Exception("Groq rate limit exceeded")
+    mock_get_client.return_value = (mock_client, "llama-3.3-70b-versatile")
 
     with pytest.raises(RuntimeError) as exc_info:
         classify_paper(sample_parsed_document)
