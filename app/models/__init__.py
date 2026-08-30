@@ -4,6 +4,13 @@ from app.models.paper_profile import (
     PaperProfile,
     ParseAndClassifyResponse,
 )
+from app.models.routing import (
+    ActiveSectionGroup,
+    IndexRequest,
+    IndexResponse,
+    ParseClassifyIndexResponse,
+    RouteSectionsRequest,
+)
 
 __all__ = [
     "Section",
@@ -12,4 +19,9 @@ __all__ = [
     "PaperProfile",
     "ClassifyRequest",
     "ParseAndClassifyResponse",
+    "ActiveSectionGroup",
+    "IndexRequest",
+    "IndexResponse",
+    "RouteSectionsRequest",
+    "ParseClassifyIndexResponse",
 ]
