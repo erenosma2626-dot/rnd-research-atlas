@@ -7,8 +7,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config.constants import DEFAULT_PROJECT_ID, DEFAULT_USER_ID
+from app.auth.dependencies import get_current_user
+from app.config.constants import DEFAULT_PROJECT_ID
 from app.db.base import get_async_db
+from app.db.models import User
 from app.db.repository import DocumentRepository, ReportRepository, SectionRepository
 from app.models.report_section import (
     FullPipelineResponse,
@@ -34,6 +36,7 @@ router = APIRouter(tags=["Report Generation"])
 )
 async def generate_report_endpoint(
     request: GenerateReportRequest,
+    current_user: User = Depends(get_current_user),
 ) -> GenerateReportResponse:
     """Aktif bölümleri LLM ile doldurur ve rapor oluşturur."""
     try:
@@ -62,6 +65,7 @@ async def generate_report_endpoint(
 async def full_pipeline_endpoint(
     file: UploadFile = File(...),
     project_id: UUID = Query(default=DEFAULT_PROJECT_ID, description="Dokümanın ekleneceği proje kimliği"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> FullPipelineResponse:
     """Tüm analiz, formül çıkarma ve rapor üretim boru hattını çalıştırır ve veritabanına kaydeder."""
@@ -120,7 +124,7 @@ async def full_pipeline_endpoint(
         await doc_repo.add_to_project(
             project_id=project_id,
             document_id=doc_uuid,
-            added_by=DEFAULT_USER_ID,
+            added_by=current_user.id,
         )
     except Exception:
         # DB yoksa veya migration henüz yapılmadıysa pipeline'ın devam etmesine izin ver

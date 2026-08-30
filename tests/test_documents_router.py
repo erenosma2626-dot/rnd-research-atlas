@@ -38,7 +38,7 @@ def test_upload_document_async_endpoint(mock_db_session):
         assert "document_id" in data
         mock_delay.assert_called_once()
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_async_db, None)
 
 
 def test_get_document_status_endpoint(mock_db_session):
@@ -66,7 +66,7 @@ def test_get_document_status_endpoint(mock_db_session):
         assert data["processing_status"] == "processing"
         assert data["error_message"] is None
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_async_db, None)
 
 
 def test_list_project_documents_endpoint(mock_db_session):
@@ -92,7 +92,7 @@ def test_list_project_documents_endpoint(mock_db_session):
         assert data[0]["original_filename"] == "sample_paper.pdf"
         assert data[0]["processing_status"] == "done"
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_async_db, None)
 
 
 def test_get_document_report_endpoint(mock_db_session):
@@ -162,7 +162,7 @@ def test_get_document_report_endpoint(mock_db_session):
         assert len(data["sections"]) == 1
         assert data["sections"][0]["title"] == "Özet ve Katkı"
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_async_db, None)
 
 
 def test_get_document_original_url_endpoint(mock_db_session):
@@ -192,7 +192,7 @@ def test_get_document_original_url_endpoint(mock_db_session):
         assert data["original_filename"] == "paper.pdf"
         assert "https://minio.local" in data["download_url"]
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_async_db, None)
 
 
 def test_delete_document_endpoint(mock_db_session):
@@ -209,4 +209,40 @@ def test_delete_document_endpoint(mock_db_session):
         assert data["status"] == "deleted"
         assert data["document_id"] == str(doc_id)
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_async_db, None)
+
+
+def test_get_project_inventory_endpoint(mock_db_session):
+    """GET /projects/{project_id}/inventory envanter sorgu testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    project_id = uuid4()
+    doc_id = uuid4()
+    canvas_id = uuid4()
+
+    mock_inventory_items = [
+        {
+            "id": doc_id,
+            "original_filename": "paper_inventory.pdf",
+            "storage_path": "s3://documents/paper.pdf",
+            "uploaded_at": datetime.now(timezone.utc),
+            "processing_status": "done",
+            "used_in_canvases": [
+                {"canvas_id": canvas_id, "canvas_name": "Ana Canvas"}
+            ],
+        }
+    ]
+
+    with patch("app.routers.documents.InventoryRepository.get_project_inventory", new_callable=AsyncMock) as mock_get_inv:
+        mock_get_inv.return_value = mock_inventory_items
+
+        response = client.get(f"/projects/{project_id}/inventory")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["id"] == str(doc_id)
+        assert data[0]["original_filename"] == "paper_inventory.pdf"
+        assert len(data[0]["used_in_canvases"]) == 1
+        assert data[0]["used_in_canvases"][0]["canvas_name"] == "Ana Canvas"
+
+    app.dependency_overrides.pop(get_async_db, None)

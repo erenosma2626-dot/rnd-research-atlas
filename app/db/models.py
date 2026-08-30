@@ -169,3 +169,35 @@ class DocumentTag(Base):
     # İlişkiler
     document: Mapped["Document"] = relationship("Document", back_populates="document_tags")
     tag: Mapped["Tag"] = relationship("Tag", back_populates="document_tags")
+
+
+class Canvas(Base):
+    """Proje altındaki görsel çalışma alanı (Canvas sayfası)."""
+
+    __tablename__ = "canvases"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
+
+    # İlişkiler
+    items: Mapped[list["CanvasItem"]] = relationship("CanvasItem", back_populates="canvas", cascade="all, delete-orphan")
+
+
+class CanvasItem(Base):
+    """Canvas üzerindeki tekil elemanlar (doküman kutucuğu, not, bağlantı)."""
+
+    __tablename__ = "canvas_items"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    canvas_id: Mapped[UUID] = mapped_column(ForeignKey("canvases.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_type: Mapped[str] = mapped_column(String(50), nullable=False)  # document_box, note, connection
+    ref_id: Mapped[Optional[UUID]] = mapped_column(default=None, nullable=True)  # document_box ise Document.id
+    position_x: Mapped[float] = mapped_column(default=0.0, nullable=False)
+    position_y: Mapped[float] = mapped_column(default=0.0, nullable=False)
+    content: Mapped[Optional[dict]] = mapped_column(JSON, default=None, nullable=True)
+
+    # İlişkiler
+    canvas: Mapped["Canvas"] = relationship("Canvas", back_populates="items")

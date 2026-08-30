@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.auth.dependencies import get_current_user
+from app.db.models import User
 from app.models.chat import ChatRequest, ChatResponse
 from app.services.chatbot import answer_question
 
@@ -10,9 +12,12 @@ router = APIRouter(tags=["Chatbot"])
     "/chat",
     response_model=ChatResponse,
     summary="Makale üzerinde soru sor",
-    description="ChromaDB'den ilgili döküman parçalarını çeker ve Groq (llama-3.3-70b-versatile) ile kaynak referanslı cevap döner.",
+    description="ChromaDB'den ilgili döküman parçalarını çeker ve Groq ile kaynak referanslı cevap döner.",
 )
-async def chat_endpoint(request: ChatRequest) -> ChatResponse:
+async def chat_endpoint(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+) -> ChatResponse:
     """Tek döküman üzerinde serbest soru-cevap yapar."""
     try:
         return answer_question(request)

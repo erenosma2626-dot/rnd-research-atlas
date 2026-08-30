@@ -1,18 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { DEFAULT_PROJECT_ID, deleteDocument, DocumentSummary, listProjectDocuments } from '../api/client';
+import {
+  DEFAULT_PROJECT_ID,
+  deleteDocument,
+  DocumentSummary,
+  listProjectCanvases,
+  listProjectDocuments,
+} from '../api/client';
 import { DocumentCard } from '../components/DocumentCard';
+import { useAuth } from '../auth/useAuth';
 import { useTheme } from '../theme/ThemeContext';
 
 interface ProjectPageProps {
   onNavigateUpload: () => void;
   onSelectDocument: (documentId: string) => void;
+  onOpenCanvas: (canvasId: string) => void;
 }
 
-export const ProjectPage: React.FC<ProjectPageProps> = ({ onNavigateUpload, onSelectDocument }) => {
+export const ProjectPage: React.FC<ProjectPageProps> = ({
+  onNavigateUpload,
+  onSelectDocument,
+  onOpenCanvas,
+}) => {
+  const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingCanvas, setLoadingCanvas] = useState<boolean>(false);
 
   const fetchDocuments = async () => {
     try {
@@ -38,6 +52,20 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({ onNavigateUpload, onSe
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleOpenCanvasClick = async () => {
+    setLoadingCanvas(true);
+    try {
+      const canvases = await listProjectCanvases(DEFAULT_PROJECT_ID);
+      if (canvases.length > 0) {
+        onOpenCanvas(canvases[0].id);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Canvas açılamadı.');
+    } finally {
+      setLoadingCanvas(false);
+    }
+  };
 
   const handleDelete = async (docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,6 +97,39 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({ onNavigateUpload, onSe
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Canvas'ı Aç Button */}
+            <button
+              onClick={handleOpenCanvasClick}
+              disabled={loadingCanvas}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-card-border-light dark:border-card-border-dark text-xs font-medium text-text-primary-light dark:text-text-primary-dark hover:bg-card-bg-light dark:hover:bg-card-bg-dark transition-all shadow-xs"
+            >
+              <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.75}
+                  d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+                />
+              </svg>
+              {loadingCanvas ? 'Canvas Yükleniyor...' : 'Canvas Görünümü'}
+            </button>
+
+            {/* User info & Logout */}
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark text-xs">
+                <span className="text-text-secondary-light dark:text-text-secondary-dark truncate max-w-[140px]" title={user.email}>
+                  {user.email}
+                </span>
+                <button
+                  onClick={logout}
+                  className="text-rose-600 hover:text-rose-700 font-medium hover:underline ml-1"
+                  title="Çıkış Yap"
+                >
+                  Çıkış
+                </button>
+              </div>
+            )}
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}

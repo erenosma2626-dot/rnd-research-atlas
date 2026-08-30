@@ -9,16 +9,31 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config.constants import DEFAULT_PROJECT_ID, DEFAULT_USER_ID
+from app.auth.dependencies import get_current_user
+from app.config.constants import DEFAULT_PROJECT_ID
 from app.db.base import get_async_db
-from app.db.repository import DocumentRepository, ReportRepository, SectionRepository
-from app.db.seed import seed_default_user_and_project
+from app.db.models import User
+from app.db.repository import DocumentRepository, InventoryRepository, ReportRepository, SectionRepository
 from app.models.paper_profile import PaperProfile
 from app.models.report_section import FilledSection, SourceReference
 from app.storage.object_store import get_presigned_url, upload_file
 from app.worker.tasks import process_document_task
 
 router = APIRouter(tags=["Documents & Historical Reports"])
+
+
+class CanvasUsage(BaseModel):
+    canvas_id: UUID
+    canvas_name: str
+
+
+class InventoryItemResponse(BaseModel):
+    id: UUID
+    original_filename: str
+    storage_path: str
+    uploaded_at: datetime
+    processing_status: str
+    used_in_canvases: list[CanvasUsage] = []
 
 
 class DocumentListItem(BaseModel):
@@ -80,6 +95,7 @@ class OriginalDocumentUrlResponse(BaseModel):
 async def upload_document_async(
     file: UploadFile = File(...),
     project_id: UUID = Query(default=DEFAULT_PROJECT_ID, description="Dokümanın ekleneceği proje kimliği"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> UploadDocumentResponse:
     """PDF'i MinIO'ya kaydeder ve Celery arka plan işlem görevini tetikler."""
@@ -88,12 +104,6 @@ async def upload_document_async(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Geçersiz dosya formatı. Lütfen bir PDF dosyası yükleyin.",
         )
-
-    # 1. Varsayılan kullanıcı/projeyi garantiye al
-    try:
-        await seed_default_user_and_project(db)
-    except Exception:
-        pass
 
     doc_uuid = uuid4()
 
@@ -134,7 +144,7 @@ async def upload_document_async(
         await doc_repo.add_to_project(
             project_id=project_id,
             document_id=doc_uuid,
-            added_by=DEFAULT_USER_ID,
+            added_by=current_user.id,
         )
     except Exception as e:
         raise HTTPException(
@@ -196,6 +206,7 @@ async def get_document_status(
 )
 async def list_project_documents(
     project_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[DocumentListItem]:
     """Proje dökümanlarını listeler."""
@@ -215,6 +226,36 @@ async def list_project_documents(
 
 
 @router.get(
+    "/projects/{project_id}/inventory",
+    response_model=list[InventoryItemResponse],
+    summary="Projedeki doküman envanterini ve canvas kullanım durumunu listele",
+    description="Projedeki tüm dokümanları ve her birinin hangi canvas'larda eklendiğini listeler.",
+)
+async def get_project_inventory(
+    project_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> list[InventoryItemResponse]:
+    """Proje doküman envanteri ve canvas kullanım durumunu döner."""
+    inv_repo = InventoryRepository(db)
+    items = await inv_repo.get_project_inventory(project_id)
+    return [
+        InventoryItemResponse(
+            id=item["id"],
+            original_filename=item["original_filename"],
+            storage_path=item["storage_path"],
+            uploaded_at=item["uploaded_at"],
+            processing_status=item["processing_status"],
+            used_in_canvases=[
+                CanvasUsage(canvas_id=u["canvas_id"], canvas_name=u["canvas_name"])
+                for u in item.get("used_in_canvases", [])
+            ],
+        )
+        for item in items
+    ]
+
+
+@router.get(
     "/documents/{document_id}/report",
     response_model=HistoricalReportResponse,
     summary="Dokümana ait en son raporu getir",
@@ -222,6 +263,7 @@ async def list_project_documents(
 )
 async def get_document_report(
     document_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> HistoricalReportResponse:
     """Kayıtlı raporu ve bölümlerini döner."""
@@ -286,6 +328,7 @@ async def get_document_report(
 )
 async def get_document_original_url(
     document_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> OriginalDocumentUrlResponse:
     """MinIO imzalı indirme URL'i döner."""
@@ -318,6 +361,7 @@ async def get_document_original_url(
 )
 async def delete_document_endpoint(
     document_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, str]:
     """Dokümanı soft delete yapar."""

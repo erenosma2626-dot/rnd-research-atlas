@@ -1,5 +1,28 @@
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
 
+export const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000002';
+
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+export function getAuthHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...customHeaders };
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
+
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const headers = getAuthHeaders(
+    (options.headers as Record<string, string>) || {}
+  );
+  return fetch(url, { ...options, headers });
+}
+
 export interface SourceReference {
   page: number;
   section_title: string;
@@ -125,7 +148,38 @@ export interface FinalizeReportWithDiagramsResponse {
   diagrams: Record<string, GeneratedDiagram>;
 }
 
-export const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000002';
+export interface CanvasUsage {
+  canvas_id: string;
+  canvas_name: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  original_filename: string;
+  storage_path: string;
+  uploaded_at: string;
+  processing_status: 'pending' | 'processing' | 'done' | 'failed';
+  used_in_canvases: CanvasUsage[];
+}
+
+export interface CanvasSummary {
+  id: string;
+  project_id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface CanvasItemData {
+  id: string;
+  canvas_id: string;
+  item_type: 'document_box' | 'note' | 'connection' | string;
+  ref_id?: string | null;
+  position_x: number;
+  position_y: number;
+  content?: Record<string, any> | null;
+  document_title?: string | null;
+  document_status?: string | null;
+}
 
 // 1. Asenkron Doküman Yükleme
 export async function uploadDocument(
@@ -135,7 +189,7 @@ export async function uploadDocument(
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch(`${API_BASE_URL}/documents/upload?project_id=${projectId}`, {
+  const res = await authFetch(`${API_BASE_URL}/documents/upload?project_id=${projectId}`, {
     method: 'POST',
     body: formData,
   });
@@ -150,7 +204,7 @@ export async function uploadDocument(
 
 // 2. Doküman Durumunu Sorgulama (Polling)
 export async function getDocumentStatus(documentId: string): Promise<DocumentStatusResponse> {
-  const res = await fetch(`${API_BASE_URL}/documents/${documentId}/status`);
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/status`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Durum sorgulanamadı' }));
     throw new Error(err.detail || `Sunucu hatası: ${res.status}`);
@@ -160,7 +214,7 @@ export async function getDocumentStatus(documentId: string): Promise<DocumentSta
 
 // 3. Kayıtlı Raporu Getirme
 export async function getDocumentReport(documentId: string): Promise<HistoricalReportResponse> {
-  const res = await fetch(`${API_BASE_URL}/documents/${documentId}/report`);
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/report`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Rapor getirilemedi' }));
     throw new Error(err.detail || `Sunucu hatası: ${res.status}`);
@@ -172,7 +226,7 @@ export async function getDocumentReport(documentId: string): Promise<HistoricalR
 export async function listProjectDocuments(
   projectId: string = DEFAULT_PROJECT_ID
 ): Promise<DocumentSummary[]> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/documents`);
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/documents`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Dokümanlar listelenemedi' }));
     throw new Error(err.detail || `Sunucu hatası: ${res.status}`);
@@ -182,7 +236,7 @@ export async function listProjectDocuments(
 
 // 5. Orijinal PDF İndirme URL'i Alma
 export async function getOriginalPdfUrl(documentId: string): Promise<string> {
-  const res = await fetch(`${API_BASE_URL}/documents/${documentId}/original`);
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/original`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'İndirme URL alınamadı' }));
     throw new Error(err.detail || `Sunucu hatası: ${res.status}`);
@@ -193,7 +247,7 @@ export async function getOriginalPdfUrl(documentId: string): Promise<string> {
 
 // 6. Dokümanı Silme (Soft Delete)
 export async function deleteDocument(documentId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}`, {
     method: 'DELETE',
   });
   if (!res.ok) {
@@ -202,7 +256,7 @@ export async function deleteDocument(documentId: string): Promise<void> {
   }
 }
 
-// 7. Makale Chatbot Soru Sorma (Object ve Positional destekli)
+// 7. Makale Chatbot Soru Sorma
 export async function sendChatMessage(
   paramsOrDocId: { document_id: string; question: string; history?: any[] } | string,
   questionParam?: string,
@@ -222,7 +276,7 @@ export async function sendChatMessage(
     history = historyParam;
   }
 
-  const res = await fetch(`${API_BASE_URL}/chat`, {
+  const res = await authFetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -255,7 +309,7 @@ export async function generateDiagram(
   sectionContent: Record<string, any>,
   sectionType: string = 'prose'
 ): Promise<{ mermaid_code: string }> {
-  const res = await fetch(`${API_BASE_URL}/generate-diagram`, {
+  const res = await authFetch(`${API_BASE_URL}/generate-diagram`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -278,7 +332,7 @@ export async function finalizeReport(
   state: ControlPanelState,
   originalSections: FilledSection[]
 ): Promise<FinalizeReportWithDiagramsResponse> {
-  const res = await fetch(`${API_BASE_URL}/control-panel/finalize`, {
+  const res = await authFetch(`${API_BASE_URL}/control-panel/finalize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -293,4 +347,141 @@ export async function finalizeReport(
   }
 
   return res.json();
+}
+
+// 10. Canvas Oluşturma
+export async function createCanvas(
+  name: string = 'Ana Canvas',
+  projectId: string = DEFAULT_PROJECT_ID
+): Promise<CanvasSummary> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/canvases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    throw new Error('Canvas oluşturulamadı');
+  }
+  return res.json();
+}
+
+// 11. Projedeki Canvas'ları Listeleme
+export async function listProjectCanvases(
+  projectId: string = DEFAULT_PROJECT_ID
+): Promise<CanvasSummary[]> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/canvases`);
+  if (!res.ok) {
+    throw new Error('Canvas listesi alınamadı');
+  }
+  return res.json();
+}
+
+// 11b. Canvas Yeniden Adlandırma
+export async function renameCanvas(
+  canvasId: string,
+  name: string
+): Promise<CanvasSummary> {
+  const res = await authFetch(`${API_BASE_URL}/canvases/${canvasId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    throw new Error('Canvas adı güncellenemedi');
+  }
+  return res.json();
+}
+
+// 11c. Canvas Silme
+export async function deleteCanvas(canvasId: string): Promise<void> {
+  const res = await authFetch(`${API_BASE_URL}/canvases/${canvasId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error('Canvas silinemedi');
+  }
+}
+
+// 11d. Proje Doküman Envanteri (Canvas Kullanım Bilgisi Dahil)
+export async function getProjectInventory(
+  projectId: string = DEFAULT_PROJECT_ID
+): Promise<InventoryItem[]> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/inventory`);
+  if (!res.ok) {
+    throw new Error('Proje envanteri alınamadı');
+  }
+  return res.json();
+}
+
+// 12. Canvas Elemanlarını Listeleme
+export async function listCanvasItems(canvasId: string): Promise<CanvasItemData[]> {
+  const res = await authFetch(`${API_BASE_URL}/canvases/${canvasId}/items`);
+  if (!res.ok) {
+    throw new Error('Canvas elemanları alınamadı');
+  }
+  return res.json();
+}
+
+// 13. Canvas'a Eleman Ekleme
+export async function addCanvasItem(
+  canvasId: string,
+  itemType: string,
+  positionX: number,
+  positionY: number,
+  refId?: string | null,
+  content?: Record<string, any> | null
+): Promise<CanvasItemData> {
+  const res = await authFetch(`${API_BASE_URL}/canvases/${canvasId}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      item_type: itemType,
+      position_x: positionX,
+      position_y: positionY,
+      ref_id: refId,
+      content,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error('Canvas elemanı eklenemedi');
+  }
+  return res.json();
+}
+
+// 14. Canvas Elemanını Güncelleme (Pozisyon ve/veya İçerik)
+export async function updateCanvasItem(
+  itemId: string,
+  patch: {
+    position_x?: number;
+    position_y?: number;
+    content?: Record<string, any>;
+  }
+): Promise<CanvasItemData> {
+  const res = await authFetch(`${API_BASE_URL}/canvas-items/${itemId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    throw new Error('Canvas elemanı güncellenemedi');
+  }
+  return res.json();
+}
+
+export async function updateCanvasItemPosition(
+  itemId: string,
+  positionX: number,
+  positionY: number
+): Promise<CanvasItemData> {
+  return updateCanvasItem(itemId, { position_x: positionX, position_y: positionY });
+}
+
+// 15. Canvas Elemanını Silme
+export async function deleteCanvasItem(itemId: string): Promise<void> {
+  const res = await authFetch(`${API_BASE_URL}/canvas-items/${itemId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error('Canvas elemanı silinemedi');
+  }
 }

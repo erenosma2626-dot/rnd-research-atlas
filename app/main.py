@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.seed import seed_default_user_and_project
+from app.routers.canvas import router as canvas_router
 from app.routers.chat import router as chat_router
 from app.routers.classify import router as classify_router
 from app.routers.control_panel import router as control_panel_router
@@ -21,7 +22,6 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI uygulama yaşam döngüsü yöneticisi."""
-    # Başlangıçta varsayılan kullanıcı ve projeyi oluştur
     try:
         await seed_default_user_and_project()
     except Exception as e:
@@ -31,8 +31,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="rnd-paper-canvas API",
-    description="Akademik makale ve araştırma raporları analiz motoru - Step 11: Pipeline Persistence (Postgres + MinIO)",
-    version="0.11.0",
+    description="Akademik makale ve araştırma raporları analiz motoru & görsel çalışma alanı (Canvas)",
+    version="0.14.0",
     lifespan=lifespan,
 )
 
@@ -55,6 +55,7 @@ app.include_router(diagram_router)
 app.include_router(chat_router)
 app.include_router(formula_router)
 app.include_router(documents_router)
+app.include_router(canvas_router)
 
 
 @app.get(

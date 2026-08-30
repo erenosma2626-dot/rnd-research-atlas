@@ -1,3 +1,4 @@
+from app.routers.canvas import router as canvas_router
 from app.routers.chat import router as chat_router
 from app.routers.classify import router as classify_router
 from app.routers.control_panel import router as control_panel_router
@@ -18,4 +19,5 @@ __all__ = [
     "chat_router",
     "formula_router",
     "documents_router",
+    "canvas_router",
 ]

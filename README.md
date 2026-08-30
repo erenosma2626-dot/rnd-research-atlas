@@ -2,7 +2,7 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9) yanı sıra **Faz 2 Kalıcılık, Veri, Asenkron İşlem ve Proje Doküman Yönetim Katmanını** (Step 10-13) eksiksiz olarak içerir:
+Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9), **Faz 2 Kalıcılık, Veri ve Asenkron İşlem Katmanının** (Step 10-13), **Faz 3 Görsel Canvas Çalışma Alanının** (Step 14-16) ve **Faz 4 Çoklu Kullanıcı & Yetkilendirme Katmanının** (Step 17) özelliklerini içerir:
 
 1. **Docling Parser (Step 1):** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
 2. **PaperProfile Classifier (Step 2):** Düşük token maliyetiyle doküman iskeletini tek seferlik Groq API çağrısıyla (`openai/gpt-oss-20b`) analiz ederek 17 bağımsız içerik bayrağı, birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
@@ -17,6 +17,10 @@ Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9) yanı sıra **Fa
 11. **Pipeline DB & Obje Depolama Entegrasyonu (Step 11):** PDF yüklemelerinin MinIO'ya ve analiz sonuçlarının PostgreSQL'e kaydedildiği kalıcı boru hattı; geçmiş dökümanları ve raporları yeniden LLM çalıştırmadan getiren REST API katmanıdır.
 12. **Asenkron İşlem Mimarisi (Step 12):** Celery + Redis tabanlı kuyruk yapısı; anında cevap dönen `POST /documents/upload`, `GET /documents/{id}/status` polling endpoint'i ve arka plan hata/yeniden deneme yönetimidir.
 13. **Frontend Asenkron Akış & Proje Doküman Listesi (Step 13):** Projedeki tüm dokümanları listeleyen pano görünümü (`ProjectPage`, `DocumentCard`), gerçek zamanlı durum takibi (`usePollDocumentStatus`, `ProcessingStatusBadge`) ve işlenen raporlara kesintisiz geçiştir.
+14. **Canvas Temel Kurulumu (Step 14):** React Flow entegrasyonu (`reactflow`), `canvases` ve `canvas_items` PostgreSQL tabloları, sürükle-bırak pozisyon koordinat kaydı (`onNodeDragStop`), doküman kutucuğu düğümleri (`DocumentBoxNode`) ve araç çubuğudur (`CanvasToolbar`).
+15. **Canvas Bağlantı ve Not Sistemi (Step 15):** Doküman kutucukları ve notlar arası yönlü ok bağlantıları (`onConnect`, `MarkerType.ArrowClosed`), çift tıklamayla bağlantı etiketi düzenleme, yeniden boyutlandırılabilir serbest not düğümleri (`NoteNode`, `NodeResizer`) ve pozisyon/içerik senkronizasyonudur (`update_item`).
+16. **Çoklu Canvas Sekmeleri & Envanter Paneli (Step 16):** Proje içinde bağımsız birden çok canvas sayfası arasında sekme (`CanvasTabs`) ile geçiş, canvas oluşturma/yeniden adlandırma/silme, projedeki tüm dokümanları listeleyen envanter çekmecesi (`InventoryPanel`) ve envanterden canvas'a sürükle-bırak yerleştirmedir (`screenToFlowPosition`).
+17. **Supabase Auth & Kullanıcı İzolasyonu (Step 17):** Supabase JWT doğrulama (`PyJWT`), FastAPI `get_current_user` dependency injection, otomatik kullanıcı provizyonu (JIT provisioning), React `AuthProvider`, giriş/kayıt sayfaları (`LoginPage`, `SignupPage`) ve kullanıcıya özel proje/doküman izolasyonudur.
 
 ---
 
@@ -46,7 +50,7 @@ alembic upgrade head
 cp .env.example .env
 ```
 
-`.env` dosyanıza kendi Groq API anahtarınızı ekleyin:
+`.env` dosyanıza kendi anahtarlarınızı ekleyin:
 ```env
 GROQ_API_KEY=gsk_...
 GROQ_CLASSIFY_MODEL=openai/gpt-oss-20b
@@ -61,12 +65,21 @@ MINIO_SECRET_KEY=devpassword123
 MINIO_BUCKET=documents
 MINIO_SECURE=false
 REDIS_URL=redis://localhost:6379/0
+SUPABASE_JWT_SECRET=your_supabase_jwt_secret
 ```
 
 ### 3. Frontend Kurulumu
 ```bash
 cd frontend
 npm install
+cp .env.example .env
+```
+
+`frontend/.env` dosyanıza Supabase proje bilgilerinizi ekleyin:
+```env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 ---
@@ -96,7 +109,7 @@ npm run dev
 ## 🧪 Testleri Çalıştırma
 
 ```bash
-# Backend Testleri (70 Test)
+# Backend Testleri
 .venv/bin/pytest tests/
 
 # Frontend Build Testi

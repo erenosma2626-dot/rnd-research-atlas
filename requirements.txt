@@ -16,3 +16,5 @@ alembic>=1.13.0
 minio>=7.2.0
 celery>=5.4.0
 redis>=5.0.0
+pyjwt>=2.8.0
+cryptography>=42.0.0
