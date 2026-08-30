@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { DEFAULT_PROJECT_ID } from './api/client';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { CanvasPage } from './pages/CanvasPage';
 import { LoginPage } from './pages/LoginPage';
+import { ProjectListPage } from './pages/ProjectListPage';
 import { ProjectPage } from './pages/ProjectPage';
+import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 import { ReportPage } from './pages/ReportPage';
 import { SignupPage } from './pages/SignupPage';
 import { UploadPage } from './pages/UploadPage';
@@ -12,10 +16,33 @@ function AuthenticatedApp() {
   const { user, loading } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
 
-  const [currentView, setCurrentView] = useState<'project' | 'upload' | 'report' | 'canvas'>('project');
+  // URL path'inden davet token'ı yakalama (/invite/:token)
+  const [inviteToken, setInviteToken] = useState<string | null>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/invite/')) {
+      return path.split('/invite/')[1];
+    }
+    const params = new URLSearchParams(window.location.search);
+    return params.get('invite');
+  });
+
+  const [currentView, setCurrentView] = useState<
+    'project_list' | 'project' | 'settings' | 'upload' | 'report' | 'canvas' | 'accept_invite'
+  >(() => (inviteToken ? 'accept_invite' : 'project_list'));
+
+  const [activeProjectId, setActiveProjectId] = useState<string>(DEFAULT_PROJECT_ID);
+  const [activeProjectName, setActiveProjectName] = useState<string>('Varsayılan Proje');
+  const [activeUserRole, setActiveUserRole] = useState<string>('owner');
+
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [activeFilename, setActiveFilename] = useState<string>('');
   const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (inviteToken) {
+      setCurrentView('accept_invite');
+    }
+  }, [inviteToken]);
 
   if (loading) {
     return (
@@ -35,8 +62,23 @@ function AuthenticatedApp() {
     );
   }
 
+  const handleSelectProject = (projectId: string, projectName: string, userRole: string) => {
+    setActiveProjectId(projectId);
+    setActiveProjectName(projectName);
+    setActiveUserRole(userRole);
+    setCurrentView('project');
+  };
+
+  const handleNavigateProjectsList = () => {
+    setCurrentView('project_list');
+  };
+
   const handleNavigateHome = () => {
     setCurrentView('project');
+  };
+
+  const handleNavigateSettings = () => {
+    setCurrentView('settings');
   };
 
   const handleNavigateUpload = () => {
@@ -60,13 +102,52 @@ function AuthenticatedApp() {
     setCurrentView('report');
   };
 
+  const handleAcceptInviteSuccess = (projectId: string, projectName: string) => {
+    window.history.pushState({}, '', '/');
+    setInviteToken(null);
+    setActiveProjectId(projectId);
+    setActiveProjectName(projectName);
+    setActiveUserRole('editor');
+    setCurrentView('project');
+  };
+
   return (
     <>
+      {currentView === 'accept_invite' && inviteToken && (
+        <AcceptInvitePage
+          inviteToken={inviteToken}
+          onAcceptSuccess={handleAcceptInviteSuccess}
+          onNavigateHome={() => {
+            window.history.pushState({}, '', '/');
+            setInviteToken(null);
+            setCurrentView('project_list');
+          }}
+        />
+      )}
+
+      {currentView === 'project_list' && (
+        <ProjectListPage onSelectProject={handleSelectProject} />
+      )}
+
       {currentView === 'project' && (
         <ProjectPage
+          projectId={activeProjectId}
+          projectName={activeProjectName}
+          userRole={activeUserRole}
           onNavigateUpload={handleNavigateUpload}
           onSelectDocument={handleSelectDocument}
           onOpenCanvas={handleOpenCanvas}
+          onNavigateSettings={handleNavigateSettings}
+          onNavigateProjectsList={handleNavigateProjectsList}
+        />
+      )}
+
+      {currentView === 'settings' && (
+        <ProjectSettingsPage
+          projectId={activeProjectId}
+          projectName={activeProjectName}
+          userRole={activeUserRole}
+          onNavigateBack={handleNavigateHome}
         />
       )}
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
@@ -6,7 +6,18 @@ from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Canvas, CanvasItem, Document, ProjectDocument, Report, Section
+from app.db.models import (
+    Canvas,
+    CanvasItem,
+    Document,
+    Project,
+    ProjectDocument,
+    ProjectInvite,
+    ProjectMember,
+    Report,
+    Section,
+    User,
+)
 
 
 class DocumentRepository:
@@ -398,3 +409,220 @@ class InventoryRepository:
             })
 
         return results
+
+
+class ProjectRepository:
+    """Proje yönetimi için veri erişim katmanı."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(
+        self,
+        owner_id: UUID,
+        name: str,
+        description: Optional[str] = None,
+    ) -> Project:
+        """Yeni bir proje oluşturur, sahibini 'owner' üye yapar ve varsayılan canvas açar."""
+        project = Project(
+            id=uuid4(),
+            name=name,
+            owner_id=owner_id,
+        )
+        self.session.add(project)
+        await self.session.flush()
+
+        # Sahip için üyelik kaydı
+        member = ProjectMember(
+            project_id=project.id,
+            user_id=owner_id,
+            role="owner",
+            invited_by=owner_id,
+            joined_at=datetime.now(timezone.utc),
+            invited_at=datetime.now(timezone.utc),
+        )
+        self.session.add(member)
+
+        # Varsayılan canvas
+        canvas = Canvas(
+            project_id=project.id,
+            name="Ana Canvas",
+        )
+        self.session.add(canvas)
+        await self.session.flush()
+        return project
+
+    async def get_by_id(self, project_id: UUID) -> Optional[Project]:
+        """Kimliğe göre projeyi döner."""
+        stmt = select(Project).where(Project.id == project_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_by_user(self, user_id: UUID) -> list[dict[str, Any]]:
+        """Kullanıcının sahibi veya üyesi olduğu tüm aktif projeleri rolleriyle döner."""
+        stmt = (
+            select(
+                Project.id,
+                Project.name,
+                Project.owner_id,
+                Project.created_at,
+                ProjectMember.role,
+            )
+            .join(ProjectMember, ProjectMember.project_id == Project.id)
+            .where(ProjectMember.user_id == user_id)
+            .order_by(Project.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        rows = res.all()
+
+        return [
+            {
+                "id": r.id,
+                "name": r.name,
+                "owner_id": r.owner_id,
+                "created_at": r.created_at,
+                "role": r.role,
+            }
+            for r in rows
+        ]
+
+    async def soft_delete(self, project_id: UUID) -> bool:
+        """Projeyi soft delete yapar."""
+        now = datetime.now(timezone.utc)
+        stmt = update(Project).where(Project.id == project_id).values(deleted_at=now)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0
+
+
+class ProjectMemberRepository:
+    """Proje üyeleri ve yetkileri için veri erişim katmanı."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_member(self, project_id: UUID, user_id: UUID) -> Optional[ProjectMember]:
+        """Proje ve kullanıcı kimliğine göre üyelik kaydını döner."""
+        stmt = select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+        )
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def add_member(
+        self,
+        project_id: UUID,
+        user_id: UUID,
+        role: str,
+        invited_by: Optional[UUID] = None,
+    ) -> ProjectMember:
+        """Projeye yeni üye ekler veya rolünü günceller."""
+        existing = await self.get_member(project_id, user_id)
+        if existing:
+            existing.role = role
+            existing.joined_at = datetime.now(timezone.utc)
+            await self.session.flush()
+            return existing
+
+        now = datetime.now(timezone.utc)
+        member = ProjectMember(
+            id=uuid4(),
+            project_id=project_id,
+            user_id=user_id,
+            role=role,
+            invited_by=invited_by,
+            joined_at=now,
+            invited_at=now,
+        )
+        self.session.add(member)
+        await self.session.flush()
+        return member
+
+    async def list_members(self, project_id: UUID) -> list[dict[str, Any]]:
+        """Projenin tüm üyelerini kullanıcı detaylarıyla döner."""
+        stmt = (
+            select(
+                ProjectMember.id,
+                ProjectMember.user_id,
+                ProjectMember.role,
+                ProjectMember.joined_at,
+                ProjectMember.invited_at,
+                User.email,
+                User.display_name,
+            )
+            .join(User, User.id == ProjectMember.user_id)
+            .where(ProjectMember.project_id == project_id)
+            .order_by(ProjectMember.joined_at.asc())
+        )
+        res = await self.session.execute(stmt)
+        rows = res.all()
+        return [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "email": r.email,
+                "display_name": r.display_name,
+                "role": r.role,
+                "joined_at": r.joined_at,
+                "invited_at": r.invited_at,
+            }
+            for r in rows
+        ]
+
+    async def remove_member(self, project_id: UUID, user_id: UUID) -> bool:
+        """Üyeyi projeden çıkarır."""
+        from sqlalchemy import delete
+        stmt = delete(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+        )
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0
+
+
+class ProjectInviteRepository:
+    """Proje davet token'ları için veri erişim katmanı."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create_invite(
+        self,
+        project_id: UUID,
+        invited_email: str,
+        role: str,
+        expires_in_days: int = 7,
+    ) -> ProjectInvite:
+        """Yeni bir davet oluşturur (7 gün geçerli)."""
+        expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
+        invite = ProjectInvite(
+            id=uuid4(),
+            project_id=project_id,
+            invited_email=invited_email.strip().lower(),
+            role=role,
+            invite_token=str(uuid4()),
+            expires_at=expires_at,
+            status="pending",
+        )
+        self.session.add(invite)
+        await self.session.flush()
+        return invite
+
+    async def get_by_token(self, invite_token: str) -> Optional[ProjectInvite]:
+        """Token ile daveti döner."""
+        stmt = select(ProjectInvite).where(ProjectInvite.invite_token == invite_token)
+        res = await self.session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def mark_accepted(self, invite_id: UUID) -> bool:
+        """Daveti kabul edildi olarak işaretler."""
+        stmt = (
+            update(ProjectInvite)
+            .where(ProjectInvite.id == invite_id)
+            .values(status="accepted")
+        )
+        res = await self.session.execute(stmt)
+        await self.session.flush()
+        return res.rowcount > 0

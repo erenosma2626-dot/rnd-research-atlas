@@ -2,7 +2,7 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9), **Faz 2 Kalıcılık, Veri ve Asenkron İşlem Katmanının** (Step 10-13), **Faz 3 Görsel Canvas Çalışma Alanının** (Step 14-16) ve **Faz 4 Çoklu Kullanıcı & Yetkilendirme Katmanının** (Step 17) özelliklerini içerir:
+Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9), **Faz 2 Kalıcılık, Veri ve Asenkron İşlem Katmanının** (Step 10-13), **Faz 3 Görsel Canvas Çalışma Alanının** (Step 14-16) ve **Faz 4 Çoklu Kullanıcı & Yetkilendirme Katmanının** (Step 17-18) özelliklerini içerir:
 
 1. **Docling Parser (Step 1):** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
 2. **PaperProfile Classifier (Step 2):** Düşük token maliyetiyle doküman iskeletini tek seferlik Groq API çağrısıyla (`openai/gpt-oss-20b`) analiz ederek 17 bağımsız içerik bayrağı, birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
@@ -20,7 +20,8 @@ Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9), **Faz 2 Kalıc�
 14. **Canvas Temel Kurulumu (Step 14):** React Flow entegrasyonu (`reactflow`), `canvases` ve `canvas_items` PostgreSQL tabloları, sürükle-bırak pozisyon koordinat kaydı (`onNodeDragStop`), doküman kutucuğu düğümleri (`DocumentBoxNode`) ve araç çubuğudur (`CanvasToolbar`).
 15. **Canvas Bağlantı ve Not Sistemi (Step 15):** Doküman kutucukları ve notlar arası yönlü ok bağlantıları (`onConnect`, `MarkerType.ArrowClosed`), çift tıklamayla bağlantı etiketi düzenleme, yeniden boyutlandırılabilir serbest not düğümleri (`NoteNode`, `NodeResizer`) ve pozisyon/içerik senkronizasyonudur (`update_item`).
 16. **Çoklu Canvas Sekmeleri & Envanter Paneli (Step 16):** Proje içinde bağımsız birden çok canvas sayfası arasında sekme (`CanvasTabs`) ile geçiş, canvas oluşturma/yeniden adlandırma/silme, projedeki tüm dokümanları listeleyen envanter çekmecesi (`InventoryPanel`) ve envanterden canvas'a sürükle-bırak yerleştirmedir (`screenToFlowPosition`).
-17. **Supabase Auth & Kullanıcı İzolasyonu (Step 17):** Supabase JWT doğrulama (`PyJWT`), FastAPI `get_current_user` dependency injection, otomatik kullanıcı provizyonu (JIT provisioning), React `AuthProvider`, giriş/kayıt sayfaları (`LoginPage`, `SignupPage`) ve kullanıcıya özel proje/doküman izolasyonudur.
+17. **Supabase Auth Entegrasyonu (Step 17):** Supabase JWT doğrulama (`PyJWT`), FastAPI `get_current_user` dependency injection, otomatik kullanıcı provizyonu (JIT provisioning), React `AuthProvider`, giriş/kayıt sayfaları (`LoginPage`, `SignupPage`) ve kullanıcıya özel proje/doküman izolasyonudur.
+18. **Permission Modeli & Proje Davet Sistemi (Step 18):** `ProjectMember` ve `ProjectInvite` tabloları, rol hiyerarşisi (`viewer`, `editor`, `owner`), `require_role` FastAPI dependency katmanı, süreli token tabanlı davet bağlantısı üretme/kabul etme (`POST /projects/{id}/invite`, `POST /invites/{token}/accept`), üye rozetleri (`MemberBadge`), çoklu proje liste paneli (`ProjectListPage`), üye yönetimi (`ProjectSettingsPage`) ve davet karşılama (`AcceptInvitePage`) sayfalarıdır.
 
 ---
 

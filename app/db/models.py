@@ -201,3 +201,39 @@ class CanvasItem(Base):
 
     # İlişkiler
     canvas: Mapped["Canvas"] = relationship("Canvas", back_populates="items")
+
+
+class ProjectMember(Base):
+    """Proje üyeleri ve roller tablosu (owner | editor | viewer)."""
+
+    __tablename__ = "project_members"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)  # "owner" | "editor" | "viewer"
+    invited_by: Mapped[Optional[UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    joined_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
+    invited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    # İlişkiler
+    project: Mapped["Project"] = relationship("Project", backref="members")
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+
+class ProjectInvite(Base):
+    """Proje davet token'ları tablosu."""
+
+    __tablename__ = "project_invites"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    invited_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)  # "editor" | "viewer"
+    invite_token: Mapped[str] = mapped_column(String(255), unique=True, default=lambda: str(uuid4()), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)  # "pending" | "accepted" | "expired" | "revoked"
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    # İlişkiler
+    project: Mapped["Project"] = relationship("Project", backref="invites")

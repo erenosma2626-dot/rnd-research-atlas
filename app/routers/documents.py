@@ -10,9 +10,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.auth.permissions import require_role
 from app.config.constants import DEFAULT_PROJECT_ID
 from app.db.base import get_async_db
-from app.db.models import User
+from app.db.models import ProjectMember, User
 from app.db.repository import DocumentRepository, InventoryRepository, ReportRepository, SectionRepository
 from app.models.paper_profile import PaperProfile
 from app.models.report_section import FilledSection, SourceReference
@@ -95,6 +96,7 @@ class OriginalDocumentUrlResponse(BaseModel):
 async def upload_document_async(
     file: UploadFile = File(...),
     project_id: UUID = Query(default=DEFAULT_PROJECT_ID, description="Dokümanın ekleneceği proje kimliği"),
+    _: ProjectMember = Depends(require_role("editor")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> UploadDocumentResponse:
@@ -206,6 +208,7 @@ async def get_document_status(
 )
 async def list_project_documents(
     project_id: UUID,
+    _: ProjectMember = Depends(require_role("viewer")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[DocumentListItem]:
@@ -233,6 +236,7 @@ async def list_project_documents(
 )
 async def get_project_inventory(
     project_id: UUID,
+    _: ProjectMember = Depends(require_role("viewer")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[InventoryItemResponse]:

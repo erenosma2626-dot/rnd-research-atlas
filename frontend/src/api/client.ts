@@ -162,6 +162,41 @@ export interface InventoryItem {
   used_in_canvases: CanvasUsage[];
 }
 
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  owner_id: string;
+  role: 'owner' | 'editor' | 'viewer';
+  created_at: string;
+}
+
+export interface ProjectMemberInfo {
+  id: string;
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: 'owner' | 'editor' | 'viewer';
+  joined_at?: string | null;
+  invited_at: string;
+}
+
+export interface InviteResponse {
+  invite_token: string;
+  invite_link: string;
+  role: string;
+  invited_email: string;
+  expires_at: string;
+}
+
+export interface InviteInfo {
+  project_id: string;
+  project_name: string;
+  invited_email: string;
+  role: string;
+  expires_at: string;
+  status: string;
+}
+
 export interface CanvasSummary {
   id: string;
   project_id: string;
@@ -483,5 +518,86 @@ export async function deleteCanvasItem(itemId: string): Promise<void> {
   });
   if (!res.ok) {
     throw new Error('Canvas elemanı silinemedi');
+  }
+}
+
+// 16. Kullanıcının Tüm Projelerini Listeleme
+export async function listUserProjects(): Promise<ProjectSummary[]> {
+  const res = await authFetch(`${API_BASE_URL}/projects`);
+  if (!res.ok) {
+    throw new Error('Projeler listelenemedi');
+  }
+  return res.json();
+}
+
+// 17. Yeni Proje Oluşturma
+export async function createProject(name: string, description?: string): Promise<ProjectSummary> {
+  const res = await authFetch(`${API_BASE_URL}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description }),
+  });
+  if (!res.ok) {
+    throw new Error('Proje oluşturulamadı');
+  }
+  return res.json();
+}
+
+// 18. Projeye Üye Davet Etme (Owner)
+export async function createProjectInvite(
+  projectId: string,
+  email: string,
+  role: 'editor' | 'viewer' = 'editor'
+): Promise<InviteResponse> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, role }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Davet oluşturulamadı' }));
+    throw new Error(err.detail || 'Davet oluşturulamadı');
+  }
+  return res.json();
+}
+
+// 19. Davet Bilgisi Çekme
+export async function getInviteInfo(inviteToken: string): Promise<InviteInfo> {
+  const res = await authFetch(`${API_BASE_URL}/invites/${inviteToken}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Davet bulunamadı' }));
+    throw new Error(err.detail || 'Davet bulunamadı');
+  }
+  return res.json();
+}
+
+// 20. Daveti Kabul Etme
+export async function acceptProjectInvite(inviteToken: string): Promise<{ status: string; project_id: string; project_name: string }> {
+  const res = await authFetch(`${API_BASE_URL}/invites/${inviteToken}/accept`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Davet kabul edilemedi' }));
+    throw new Error(err.detail || 'Davet kabul edilemedi');
+  }
+  return res.json();
+}
+
+// 21. Proje Üyelerini Listeleme
+export async function listProjectMembers(projectId: string): Promise<ProjectMemberInfo[]> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/members`);
+  if (!res.ok) {
+    throw new Error('Üyeler listelenemedi');
+  }
+  return res.json();
+}
+
+// 22. Üyeyi Projeden Çıkarma
+export async function removeProjectMember(projectId: string, userId: string): Promise<void> {
+  const res = await authFetch(`${API_BASE_URL}/projects/${projectId}/members/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error('Üye projeden çıkarılamadı');
   }
 }

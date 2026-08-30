@@ -7,8 +7,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.auth.permissions import require_role
 from app.db.base import get_async_db
-from app.db.models import User
+from app.db.models import ProjectMember, User
 from app.db.repository import CanvasItemRepository, CanvasRepository, DocumentRepository
 
 router = APIRouter(tags=["Canvas (Workspace)"])
@@ -62,6 +63,7 @@ class CanvasItemResponse(BaseModel):
 async def create_canvas(
     project_id: UUID,
     request: CreateCanvasRequest,
+    _: ProjectMember = Depends(require_role("editor")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> CanvasResponse:
@@ -83,6 +85,7 @@ async def create_canvas(
 )
 async def list_project_canvases(
     project_id: UUID,
+    _: ProjectMember = Depends(require_role("viewer")),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[CanvasResponse]:
