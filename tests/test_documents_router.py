@@ -1,0 +1,160 @@
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+from fastapi.testclient import TestClient
+import pytest
+
+from app.config.constants import DEFAULT_PROJECT_ID, DEFAULT_USER_ID
+from app.db.base import get_async_db
+from app.db.models import Document, Report, Section
+from app.main import app
+
+client = TestClient(app)
+
+
+@pytest.fixture
+def mock_db_session():
+    return AsyncMock()
+
+
+def test_list_project_documents_endpoint(mock_db_session):
+    """GET /projects/{project_id}/documents endpoint testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    doc_id = uuid4()
+    mock_doc = Document(
+        id=doc_id,
+        original_filename="sample_paper.pdf",
+        storage_path="s3://documents/papers/sample_paper.pdf",
+        uploaded_at=datetime.now(timezone.utc),
+        processing_status="done",
+    )
+
+    with patch("app.routers.documents.DocumentRepository.list_by_project", new_callable=AsyncMock) as mock_list:
+        mock_list.return_value = [mock_doc]
+
+        response = client.get(f"/projects/{DEFAULT_PROJECT_ID}/documents")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["original_filename"] == "sample_paper.pdf"
+        assert data[0]["processing_status"] == "done"
+
+    app.dependency_overrides.clear()
+
+
+def test_get_document_report_endpoint(mock_db_session):
+    """GET /documents/{document_id}/report geçmiş rapor sorgulama testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    doc_id = uuid4()
+    report_id = uuid4()
+    mock_doc = Document(
+        id=doc_id,
+        original_filename="attention.pdf",
+        storage_path="s3://documents/attention.pdf",
+        uploaded_at=datetime.now(timezone.utc),
+        processing_status="done",
+        deleted_at=None,
+    )
+    mock_report = Report(
+        id=report_id,
+        document_id=doc_id,
+        version=1,
+        paper_profile={
+            "has_theorem_proof": False,
+            "has_heavy_notation": False,
+            "has_algorithm_pseudocode": False,
+            "has_complexity_analysis": False,
+            "has_optimization_formulation": False,
+            "has_ml_experiment": True,
+            "has_ablation_study": True,
+            "has_dataset": True,
+            "has_preprocessing_pipeline": False,
+            "has_hyperparameter_tuning": False,
+            "has_baseline_comparison": True,
+            "has_evaluation_metrics": True,
+            "has_system_architecture": False,
+            "has_survey_structure": False,
+            "has_case_study": False,
+            "has_limitations_section": False,
+            "has_future_work": False,
+            "primary_domain": "Machine Learning",
+            "confidence": 0.95,
+        },
+        generated_at=datetime.now(timezone.utc),
+    )
+    mock_section = Section(
+        id=uuid4(),
+        report_id=report_id,
+        section_type="prose",
+        title="Özet ve Katkı",
+        content={"text": "Bu çalışma transformatör mimarisini tanıtır.", "sources": [{"page": 1, "section_title": "Abstract"}]},
+        order=1,
+        diagram=None,
+    )
+
+    with patch("app.routers.documents.DocumentRepository.get_by_id", new_callable=AsyncMock) as mock_get_doc, \
+         patch("app.routers.documents.ReportRepository.get_latest_by_document", new_callable=AsyncMock) as mock_get_rep, \
+         patch("app.routers.documents.SectionRepository.get_by_report", new_callable=AsyncMock) as mock_get_sec:
+
+        mock_get_doc.return_value = mock_doc
+        mock_get_rep.return_value = mock_report
+        mock_get_sec.return_value = [mock_section]
+
+        response = client.get(f"/documents/{doc_id}/report")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_id"] == str(doc_id)
+        assert data["paper_profile"]["primary_domain"] == "Machine Learning"
+        assert len(data["sections"]) == 1
+        assert data["sections"][0]["title"] == "Özet ve Katkı"
+
+    app.dependency_overrides.clear()
+
+
+def test_get_document_original_url_endpoint(mock_db_session):
+    """GET /documents/{document_id}/original indirme URL testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    doc_id = uuid4()
+    mock_doc = Document(
+        id=doc_id,
+        original_filename="paper.pdf",
+        storage_path="s3://documents/papers/paper.pdf",
+        uploaded_at=datetime.now(timezone.utc),
+        processing_status="done",
+        deleted_at=None,
+    )
+
+    with patch("app.routers.documents.DocumentRepository.get_by_id", new_callable=AsyncMock) as mock_get_doc, \
+         patch("app.routers.documents.get_presigned_url") as mock_presigned:
+
+        mock_get_doc.return_value = mock_doc
+        mock_presigned.return_value = "https://minio.local/documents/paper.pdf?token=abc"
+
+        response = client.get(f"/documents/{doc_id}/original")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_id"] == str(doc_id)
+        assert data["original_filename"] == "paper.pdf"
+        assert "https://minio.local" in data["download_url"]
+
+    app.dependency_overrides.clear()
+
+
+def test_delete_document_endpoint(mock_db_session):
+    """DELETE /documents/{document_id} soft delete testi."""
+    app.dependency_overrides[get_async_db] = lambda: mock_db_session
+
+    doc_id = uuid4()
+    with patch("app.routers.documents.DocumentRepository.soft_delete", new_callable=AsyncMock) as mock_delete:
+        mock_delete.return_value = True
+
+        response = client.delete(f"/documents/{doc_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "deleted"
+        assert data["document_id"] == str(doc_id)
+
+    app.dependency_overrides.clear()
