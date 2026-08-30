@@ -14,6 +14,11 @@ from app.models.diagram import (
     GeneratedDiagram,
 )
 from app.models.document import Formula, ParsedDocument, Section
+from app.models.formula import (
+    ExtractedFormula,
+    ExtractFormulasRequest,
+    ExtractFormulasResponse,
+)
 from app.models.paper_profile import (
     ClassifyRequest,
     PaperProfile,
@@ -72,4 +77,7 @@ __all__ = [
     "ChatMessage",
     "ChatRequest",
     "ChatResponse",
+    "ExtractedFormula",
+    "ExtractFormulasRequest",
+    "ExtractFormulasResponse",
 ]

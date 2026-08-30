@@ -18,7 +18,7 @@ def get_diagram_instructor_client() -> tuple[instructor.Instructor, str]:
         raise ValueError("GROQ_API_KEY ortam değişkeni ayarlanmamış.")
 
     base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-    model = os.getenv("GROQ_DIAGRAM_MODEL", "llama-3.1-8b-instant")
+    model = os.getenv("GROQ_DIAGRAM_MODEL", "openai/gpt-oss-20b")
 
     client = instructor.from_openai(
         OpenAI(api_key=api_key, base_url=base_url),

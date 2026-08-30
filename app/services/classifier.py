@@ -83,7 +83,7 @@ def get_instructor_client() -> tuple[Any, str]:
         )
 
     base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-    model = os.getenv("GROQ_CLASSIFY_MODEL", "llama-3.3-70b-versatile")
+    model = os.getenv("GROQ_CLASSIFY_MODEL", "openai/gpt-oss-120b")
 
     client = instructor.from_openai(
         OpenAI(api_key=api_key, base_url=base_url),

@@ -11,6 +11,7 @@ from app.models.report_section import (
 )
 from app.parsers.docling_parser import parse_pdf
 from app.services.classifier import classify_paper
+from app.services.formula_extractor import extract_all_formulas
 from app.services.section_router import route_sections
 from app.services.slot_filler import fill_all_sections
 from app.services.vector_store import index_document
@@ -49,12 +50,12 @@ async def generate_report_endpoint(
     "/full-pipeline",
     response_model=FullPipelineResponse,
     summary="Uçtan Uca Tam Boru Hattı",
-    description="PDF dosyasını alır: Parse -> Classify -> Index -> Route -> Slot Fill işlemlerini sırayla yürüterek nihai raporu döner.",
+    description="PDF dosyasını alır: Parse -> Formula Extraction -> Classify -> Index -> Route -> Slot Fill işlemlerini sırayla yürüterek nihai raporu döner.",
 )
 async def full_pipeline_endpoint(
     file: UploadFile = File(...),
 ) -> FullPipelineResponse:
-    """Tüm analiz ve rapor üretim boru hattını tek adımda çalıştırır."""
+    """Tüm analiz, formül çıkarma ve rapor üretim boru hattını tek adımda çalıştırır."""
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -92,6 +93,12 @@ async def full_pipeline_endpoint(
                 pass
 
     try:
+        # Step 8: Formula Extraction (LaTeX Capture)
+        extracted_formulas = extract_all_formulas(parsed_doc.formulas)
+    except Exception:
+        extracted_formulas = []
+
+    try:
         # Step 2: Groq Classification
         profile = classify_paper(parsed_doc)
     except Exception as e:
@@ -111,16 +118,19 @@ async def full_pipeline_endpoint(
         )
 
     try:
-        # Step 4: Slot Filling
+        # Step 4: Slot Filling (formül zenginleştirmeli)
         filled_sections = fill_all_sections(
             document_id=document_id,
             active_groups=active_sections,
             parsed_doc=parsed_doc,
+            extracted_formulas=extracted_formulas,
+            paper_profile=profile,
         )
         return FullPipelineResponse(
             document_id=document_id,
             paper_profile=profile,
             sections=filled_sections,
+            formulas=extracted_formulas,
         )
     except Exception as e:
         raise HTTPException(

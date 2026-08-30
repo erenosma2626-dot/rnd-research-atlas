@@ -2,7 +2,7 @@
 
 Akademik makale ve araştırma raporlarını (matematik, ML/AI, Data Science eksenli) otomatik olarak analiz edip yapılandırılmış rapora çeviren, görsel bir canvas üzerinde organize etmenizi sağlayan ArGe asistanı ve analiz motoru.
 
-Bu repo **Faz 1 Analiz Motorunun** Step 1, 2, 3, 4, 5, 6 ve 7 aşamalarını eksiksiz olarak içerir:
+Bu repo **Faz 1 Analiz Motorunun** tüm adımlarını (Step 1-8) eksiksiz olarak içerir:
 
 1. **Docling Parser (Step 1):** PDF dökümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri (hierarchy level), sayfa aralıkları (page_start, page_end) ve matematiksel formülleri (formulas) yapılandırılmış JSON çıktısına dönüştürür.
 2. **PaperProfile Classifier (Step 2):** Düşük token maliyetiyle doküman iskeletini tek seferlik Groq API çağrısıyla (`llama-3.3-70b-versatile`) analiz ederek 17 bağımsız içerik bayrağı (Matematik, ML/AI/DS, Yapısal), birincil araştırma alanı (`primary_domain`) ve güven skoru (`confidence`) çıkarır.
@@ -11,6 +11,7 @@ Bu repo **Faz 1 Analiz Motorunun** Step 1, 2, 3, 4, 5, 6 ve 7 aşamalarını eks
 5. **Kontrol Paneli (Step 5):** Kullanıcının hangi bölümleri rapora dahil edeceğini, bölüm sırasını (`order`) ve hangi bölümler için diyagram üretileceğini (`diagram_requested`) belirleyip nihai raporu finalize etmesini sağlayan yönetim katmanıdır.
 6. **Deterministik Diyagram Üretimi (Step 6):** Groq (`llama-3.1-8b-instant`) sadece kısa bir graf JSON spesifikasyonu (`DiagramSpec`: nodes + edges) üretir; Mermaid.js koduna çevrim deterministik olarak kod tarafında yapılır (sıfır LLM syntax hatası).
 7. **Makale Chatbotu (Step 7):** İndekslenmiş doküman üzerinde ChromaDB RAG ve Groq (`llama-3.3-70b-versatile`) ile halüsinasyon korumalı, kaynak sayfa referanslı serbest soru-cevap asistanıdır.
+8. **Formül Extraction & LaTeX Capture (Step 8):** Docling'ten gelen ham formül bloklarını `pix2tex` veya Groq (`llama-3.1-8b-instant`) fallback ile LaTeX'e dönüştürür; `has_heavy_notation` durumunda rapor bölümlerini anahtar formüllerle zenginleştirir.
 
 ---
 
@@ -36,6 +37,8 @@ GROQ_API_KEY=gsk_...
 GROQ_CLASSIFY_MODEL=llama-3.3-70b-versatile
 GROQ_DIAGRAM_MODEL=llama-3.1-8b-instant
 GROQ_CHAT_MODEL=llama-3.3-70b-versatile
+GROQ_FORMULA_MODEL=llama-3.1-8b-instant
+FORMULA_MODE=hybrid
 ```
 
 ---
@@ -64,8 +67,9 @@ Sunucu ayağa kalktıktan sonra:
 | `POST` | `/index` | Dokümanı bölüm ve sayfa metadata'larıyla ChromaDB'ye indeksler |
 | `POST` | `/route-sections` | `PaperProfile`'a göre üretilecek aktif bölüm gruplarını döner |
 | `POST` | `/generate-report` | ChromaDB'den chunk çekip aktif bölümler için içerik üretir |
+| `POST` | `/extract-formulas` | Ham formülleri pix2tex veya Groq fallback ile LaTeX'e çevirir |
 | `POST` | `/parse-classify-index` | PDF -> Parse -> Classify -> Index -> Route adımlarını çalıştırır |
-| `POST` | `/full-pipeline` | **Uçtan Uca:** PDF -> Parse -> Classify -> Index -> Route -> Slot Fill |
+| `POST` | `/full-pipeline` | **Uçtan Uca:** PDF -> Parse -> Formula -> Classify -> Index -> Route -> Slot Fill |
 | `POST` | `/control-panel/build` | Doldurulmuş bölümlerden kullanıcı kontrol paneli durumunu oluşturur |
 | `PATCH` | `/control-panel/update` | Kullanıcı bölüm seçimlerini ve sıralamayı günceller |
 | `POST` | `/control-panel/finalize` | Seçimlere göre filtrelenmiş raporu ve talep edilen Mermaid diyagramlarını döner |

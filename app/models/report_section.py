@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from app.models.document import ParsedDocument
+from app.models.formula import ExtractedFormula
 from app.models.paper_profile import PaperProfile
 from app.models.routing import ActiveSectionGroup
 
@@ -56,4 +57,7 @@ class FullPipelineResponse(BaseModel):
     paper_profile: PaperProfile = Field(..., description="Makale profili ve bayrakları")
     sections: list[FilledSection] = Field(
         ..., description="Üretilen nihai rapor bölümleri listesi"
+    )
+    formulas: list[ExtractedFormula] = Field(
+        default_factory=list, description="Çıkarılan ve LaTeX'e dönüştürülen formüller listesi"
     )

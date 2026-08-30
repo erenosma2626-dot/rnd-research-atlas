@@ -9,3 +9,4 @@ instructor>=1.7.0
 python-dotenv>=1.0.0
 openai>=1.50.0
 chromadb>=0.5.0
+pix2tex>=0.1.4

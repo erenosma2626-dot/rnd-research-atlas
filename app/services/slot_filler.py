@@ -1,8 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from app.config.section_prompts import SECTION_PROMPTS
 from app.models.document import ParsedDocument
+from app.models.formula import ExtractedFormula
+from app.models.paper_profile import PaperProfile
 from app.models.report_section import FilledSection, SourceReference
 from app.models.routing import ActiveSectionGroup
 from app.services.classifier import LLMCallLog, get_instructor_client, log_llm_call
@@ -42,10 +44,13 @@ def fill_section(
     document_id: str,
     group: ActiveSectionGroup,
     parsed_doc: ParsedDocument,
+    extracted_formulas: Optional[list[ExtractedFormula]] = None,
+    paper_profile: Optional[PaperProfile] = None,
 ) -> FilledSection:
     """Belirli bir rapor bölüm grubunun içeriğini ChromaDB retrieval ve LLM ile doldurur.
 
     - ChromaDB'den ilgili chunk'ları çeker.
+    - has_heavy_notation=True veya formüller mevcutsa anahtar formül talimatını ekler.
     - SECTION_PROMPTS konfigürasyonuna göre Groq üzerinden yapılandırılmış çıktı ister.
     - Hata oluştuğunda tüm akışı çökertmez, error tipiyle döner.
 
@@ -53,6 +58,8 @@ def fill_section(
         document_id: Vektör veritabanındaki döküman ID.
         group: Doldurulacak aktif bölüm grubu.
         parsed_doc: Orijinal ayrıştırılmış döküman nesnesi.
+        extracted_formulas: Çıkarılan LaTeX formülleri listesi.
+        paper_profile: Makale profili.
 
     Returns:
         FilledSection: Doldurulmuş bölüm nesnesi.
@@ -98,6 +105,25 @@ def fill_section(
     else:
         context_text = "\n\n---\n\n".join(context_blocks)
 
+    # Formül zenginleştirmesi (has_heavy_notation veya formül listesi varsa)
+    formula_context = ""
+    has_heavy = paper_profile.has_heavy_notation if paper_profile else False
+    if extracted_formulas and (has_heavy or group.group_id in ["optimization_formulation", "method_steps"]):
+        valid_formulas = [f for f in extracted_formulas if f.latex_code]
+        if valid_formulas:
+            formula_lines = []
+            for f in valid_formulas[:5]:
+                conf_str = "(doğruluğu teyit edilmemiş)" if f.low_confidence else ""
+                formula_lines.append(f"- Sayfa {f.page}: $${f.latex_code}$$ {conf_str}")
+            formula_context = (
+                "\n\n--- ÇEVRİLMİŞ LATEX FORMÜLLERİ ---\n"
+                + "\n".join(formula_lines)
+                + "\nTalimat: Bu section için, yukarıda verilen çevrilmiş LaTeX formüllerinden (varsa) "
+                "en önemli 1-3 tanesini 'Anahtar Formüller' başlığı altında, sayfa referansıyla birlikte ekle. "
+                "Sadece low_confidence=False olan formülleri öncelikle kullan; low_confidence=True olanları "
+                "sadece başka seçenek yoksa ve mutlaka belirtmen gerekiyorsa kullan, kullanırsan '(doğruluğu teyit edilmemiş)' notu ekle.\n"
+            )
+
     # 2. LLM Call
     client, model_name = get_instructor_client()
     system_prompt = (
@@ -109,7 +135,8 @@ def fill_section(
     user_prompt = (
         f"SECTION TITLE: {group.title}\n"
         f"INSTRUCTION: {instruction}\n\n"
-        f"DOCUMENT RELEVANT CONTEXT:\n{context_text}\n\n"
+        f"DOCUMENT RELEVANT CONTEXT:\n{context_text}\n"
+        f"{formula_context}\n"
         f"Generate the exact structured content for this section."
     )
 
@@ -157,6 +184,8 @@ def fill_all_sections(
     document_id: str,
     active_groups: list[ActiveSectionGroup],
     parsed_doc: ParsedDocument,
+    extracted_formulas: Optional[list[ExtractedFormula]] = None,
+    paper_profile: Optional[PaperProfile] = None,
 ) -> list[FilledSection]:
     """Tüm aktif bölüm grupları için içerik üretir.
 
@@ -164,12 +193,20 @@ def fill_all_sections(
         document_id: Döküman kimliği.
         active_groups: Aktif rapor bölümleri listesi.
         parsed_doc: Ayrıştırılmış döküman nesnesi.
+        extracted_formulas: Çıkarılan formüller listesi.
+        paper_profile: Makale profili.
 
     Returns:
         list[FilledSection]: Doldurulmuş rapor bölümleri listesi.
     """
     filled_sections: list[FilledSection] = []
     for group in active_groups:
-        filled_sec = fill_section(document_id, group, parsed_doc)
+        filled_sec = fill_section(
+            document_id=document_id,
+            group=group,
+            parsed_doc=parsed_doc,
+            extracted_formulas=extracted_formulas,
+            paper_profile=paper_profile,
+        )
         filled_sections.append(filled_sec)
     return filled_sections

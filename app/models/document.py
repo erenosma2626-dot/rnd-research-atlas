@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -18,6 +19,15 @@ class Formula(BaseModel):
 
     raw_text: str = Field(..., description="Raw formula text or LaTeX extracted by Docling")
     page: int = Field(..., description="Page number where the formula appears (1-indexed)")
+    latex_code: Optional[str] = Field(
+        default=None, description="Clean LaTeX string representation"
+    )
+    method: str = Field(
+        default="docling_raw", description="'pix2tex' | 'llm_fallback' | 'docling_raw' | 'failed'"
+    )
+    low_confidence: bool = Field(
+        default=False, description="Whether the formula extraction is low confidence"
+    )
 
 
 class ParsedDocument(BaseModel):

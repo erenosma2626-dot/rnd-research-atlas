@@ -115,7 +115,7 @@ def test_generate_diagram_spec_success(mock_get_client, sample_method_section):
         diagram_type="flowchart",
     )
     mock_client.chat.completions.create.return_value = mock_spec
-    mock_get_client.return_value = (mock_client, "llama-3.1-8b-instant")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-20b")
 
     result = generate_diagram_spec(sample_method_section)
 
@@ -137,7 +137,7 @@ def test_generate_diagram_spec_truncation_safeguard(mock_get_client, sample_meth
     ]
     mock_spec = DiagramSpec(nodes=nodes, edges=edges, diagram_type="flowchart")
     mock_client.chat.completions.create.return_value = mock_spec
-    mock_get_client.return_value = (mock_client, "llama-3.1-8b-instant")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-20b")
 
     result = generate_diagram_spec(sample_method_section)
 
@@ -152,7 +152,7 @@ def test_generate_diagram_spec_fallback_on_error(mock_get_client, sample_method_
     """LLM hatası durumunda fallback spesifikasyon dönülmesi."""
     mock_client = MagicMock()
     mock_client.chat.completions.create.side_effect = Exception("LLM failure")
-    mock_get_client.return_value = (mock_client, "llama-3.1-8b-instant")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-20b")
 
     result = generate_diagram_spec(sample_method_section)
 

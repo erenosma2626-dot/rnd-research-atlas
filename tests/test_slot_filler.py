@@ -108,7 +108,7 @@ def test_fill_section_prose_success(mock_query, mock_get_client, sample_parsed_d
     mock_client.chat.completions.create.return_value = ProseContent(
         text="Bu makale hızlı bir transformer mimarisi önermektedir."
     )
-    mock_get_client.return_value = (mock_client, "llama-3.3-70b-versatile")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-120b")
 
     group = ActiveSectionGroup(group_id="core_summary", title="Özet ve Katkı", matched_flags=[])
     filled = fill_section("doc-1", group, sample_parsed_document)
@@ -130,7 +130,7 @@ def test_fill_section_table_success(mock_query, mock_get_client, sample_parsed_d
         columns=["Dataset", "Model", "Result"],
         rows=[["CIFAR-10", "OurModel", "95.4%"]],
     )
-    mock_get_client.return_value = (mock_client, "llama-3.3-70b-versatile")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-120b")
 
     group = ActiveSectionGroup(group_id="ml_experiment_table", title="Veri & Yöntem (ML)", matched_flags=[])
     filled = fill_section("doc-1", group, sample_parsed_document)
@@ -148,7 +148,7 @@ def test_fill_section_error_isolation(mock_query, mock_get_client, sample_parsed
     mock_query.return_value = []
     mock_client = MagicMock()
     mock_client.chat.completions.create.side_effect = Exception("API rate limit error")
-    mock_get_client.return_value = (mock_client, "llama-3.3-70b-versatile")
+    mock_get_client.return_value = (mock_client, "openai/gpt-oss-120b")
 
     group = ActiveSectionGroup(group_id="core_summary", title="Özet ve Katkı", matched_flags=[])
     filled = fill_section("doc-1", group, sample_parsed_document)
