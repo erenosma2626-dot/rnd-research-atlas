@@ -7,6 +7,7 @@ class FigureCandidate(BaseModel):
     figure_id: str
     caption: Optional[str] = None
     image_url: str
+    page: int = 1
     included: bool = True
     order: int = 1
 
@@ -17,6 +18,8 @@ class PlanState(BaseModel):
     extracted_figures: list[FigureCandidate] = Field(default_factory=list)
     paper_profile: Optional[dict[str, Any]] = None
     parsed_doc: Optional[dict[str, Any]] = None
+    narrative_sections: Optional[list[dict[str, Any]]] = None
+
 
 
 class ApprovePlanRequest(BaseModel):

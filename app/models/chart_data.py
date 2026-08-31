@@ -16,3 +16,4 @@ class ChartData(BaseModel):
     series: list[ChartSeries] = Field(description="Karşılaştırmalı veri serileri")
     y_axis_label: str = Field(default="Değer", description="Y ekseni birimi veya metriği (Örn: F1 Score, RMSE, Accuracy %)")
     title: str = Field(description="Grafik başlığı")
+    caption: str | None = Field(default=None, description="Grafiğin ne anlattığını özetleyen 1 cümlelik okuma notu")

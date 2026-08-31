@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { FolderOpen, Layers, LayoutGrid, Trash2 } from 'lucide-react';
+import { ChevronDown, Folder, Layers, Trash2 } from 'lucide-react';
 import { UserSummary } from '../../api/client';
 import { ProcessingStatusBadge } from '../ProcessingStatusBadge';
+import { SectionPickerMenu } from './SectionPickerMenu';
 
 export interface DocumentBoxNodeData {
   title: string;
@@ -11,19 +12,30 @@ export interface DocumentBoxNodeData {
   itemId: string;
   added_by?: UserSummary | null;
   is_own?: boolean;
-  is_exploded?: boolean;
   onOpenReport?: (documentId: string) => void;
   onDeleteItem?: (itemId: string) => void;
-  onExplodeSections?: (documentId: string, nodeId: string) => void;
-  onCollapseSections?: (documentId: string) => void;
+  onRenameTitle?: (itemId: string, newTitle: string) => void;
 }
 
-export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ id, data, selected }) => {
+export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ data, selected }) => {
   const isProcessing = data.status === 'processing' || data.status === 'pending';
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(data.title || 'İsimsiz Doküman');
 
   const contributorInitial = data.added_by?.display_name
     ? data.added_by.display_name.charAt(0).toUpperCase()
     : data.added_by?.email?.charAt(0).toUpperCase() || 'U';
+
+  const handleTitleSubmit = () => {
+    setIsEditingTitle(false);
+    const trimmed = titleValue.trim();
+    if (trimmed && trimmed !== data.title) {
+      data.onRenameTitle?.(data.itemId, trimmed);
+    } else {
+      setTitleValue(data.title || 'İsimsiz Doküman');
+    }
+  };
 
   return (
     <div
@@ -35,6 +47,15 @@ export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ id, 
           : 'border-black/[0.08] dark:border-white/[0.1] hover:border-black/20 dark:hover:border-white/20'
       }`}
     >
+      {/* Sürüklenebilir Section Menü Popover'ı */}
+      {isPickerOpen && data.documentId && (
+        <SectionPickerMenu
+          documentId={data.documentId}
+          documentTitle={data.title}
+          onClose={() => setIsPickerOpen(false)}
+        />
+      )}
+
       <Handle
         type="target"
         position={Position.Top}
@@ -73,41 +94,59 @@ export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ id, 
         <ProcessingStatusBadge status={data.status || 'done'} />
       </div>
 
-      {/* Title */}
+      {/* Title with Double-Click Inline Rename */}
       <div className="mb-3">
-        <h4 className="font-serif text-sm font-medium text-[#0A0A0A] dark:text-white line-clamp-2 leading-snug">
-          {data.title || 'İsimsiz Doküman'}
-        </h4>
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={titleValue}
+            autoFocus
+            onChange={(e) => setTitleValue(e.target.value)}
+            onBlur={handleTitleSubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleTitleSubmit();
+              if (e.key === 'Escape') {
+                setTitleValue(data.title || 'İsimsiz Doküman');
+                setIsEditingTitle(false);
+              }
+            }}
+            className="w-full px-2 py-1 text-sm font-serif font-medium rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border border-black/20 dark:border-white/20 text-[#0A0A0A] dark:text-white outline-none"
+          />
+        ) : (
+          <h4
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditingTitle(true);
+            }}
+            className="font-serif text-sm font-medium text-[#0A0A0A] dark:text-white line-clamp-2 leading-snug cursor-text select-none"
+            title="İsmi değiştirmek için çift tıklayın"
+          >
+            {data.title || 'İsimsiz Doküman'}
+          </h4>
+        )}
       </div>
 
-      {/* Section Mode Actions (Klasör Modu <-> Açık Mod) */}
+      {/* Section Mode Action ("Bölümler" Açılır Menü Butonu) */}
       {data.documentId && (
-        <div className="mb-3 flex items-center gap-2">
-          {data.is_exploded ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onCollapseSections?.(data.documentId!);
-              }}
-              className="w-full py-1.5 px-2.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-xs font-medium text-[#0A0A0A] dark:text-white flex items-center justify-center gap-1.5 transition-colors font-sans"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Klasöre Topla</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onExplodeSections?.(data.documentId!, id);
-              }}
-              className="w-full py-1.5 px-2.5 rounded-full bg-black text-white dark:bg-white dark:text-black hover:opacity-90 text-xs font-medium flex items-center justify-center gap-1.5 transition-all font-sans shadow-2xs"
-            >
-              <FolderOpen className="w-3.5 h-3.5" />
-              <span>Bölümleri Aç (Explode)</span>
-            </button>
-          )}
+        <div className="mb-3 nodrag">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsPickerOpen((prev) => !prev);
+            }}
+            className={`w-full py-1.5 px-3 rounded-full text-xs font-medium flex items-center justify-between transition-all font-sans ${
+              isPickerOpen
+                ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                : 'bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-[#0A0A0A] dark:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Folder className="w-3.5 h-3.5" />
+              <span>Bölümler</span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPickerOpen ? 'rotate-180' : ''}`} />
+          </button>
         </div>
       )}
 

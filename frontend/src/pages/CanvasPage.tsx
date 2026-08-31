@@ -26,7 +26,6 @@ import {
   deleteCanvas,
   deleteCanvasItem,
   DocumentSummary,
-  getDocumentReport,
   listCanvasItems,
   listProjectCanvases,
   renameCanvas,
@@ -34,14 +33,16 @@ import {
 } from '../api/client';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
 import { DocumentBoxNode, DocumentBoxNodeData } from '../components/canvas/DocumentBoxNode';
-import { DrawingNode, DrawingNodeData } from '../components/canvas/DrawingNode';
+import { DrawingNode } from '../components/canvas/DrawingNode';
 import { InventoryPanel } from '../components/canvas/InventoryPanel';
 import { NoteNode } from '../components/canvas/NoteNode';
 import { SectionBoxNode, SectionBoxNodeData } from '../components/canvas/SectionBoxNode';
-import { ShapeNode, ShapeNodeData } from '../components/canvas/ShapeNode';
+import { ShapeNode } from '../components/canvas/ShapeNode';
 import { StickyNoteNode, StickyNoteNodeData } from '../components/canvas/StickyNoteNode';
-import { TextNode, TextNodeData } from '../components/canvas/TextNode';
-import { ToolModeProvider, useToolMode } from '../components/canvas/ToolModeContext';
+import { TextNode } from '../components/canvas/TextNode';
+import { ToolMode, ToolModeProvider, useToolMode } from '../components/canvas/ToolModeContext';
+import { useCanvasDrawing } from '../hooks/canvas/useCanvasDrawing';
+import { useCanvasShortcuts } from '../hooks/canvas/useCanvasShortcuts';
 import { useTheme } from '../theme/ThemeContext';
 
 interface CanvasPageProps {
@@ -60,20 +61,37 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
   const { isDark } = useTheme();
   const { screenToFlowPosition, getNodes } = useReactFlow();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { toolMode, activeShapeType, activeColor } = useToolMode();
+  const { toolMode, setToolMode, activeShapeType, activeColor } = useToolMode();
 
   const [canvases, setCanvases] = useState<CanvasSummary[]>([]);
   const [activeCanvasId, setActiveCanvasId] = useState<string>(initialCanvasId || '');
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-
-  // Pen Drawing State
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPathPoints, setCurrentPathPoints] = useState<Array<{ x: number; y: number }>>([]);
-  const [copiedNodes, setCopiedNodes] = useState<Node<any>[]>([]);
-
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [loading, setLoading] = useState(true);
+
+  // Spacebar temporary pan mode
+  const previousModeRef = useRef<ToolMode>(toolMode);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.code === 'Space' && !e.repeat && toolMode !== 'pan') {
+        previousModeRef.current = toolMode;
+        setToolMode('pan');
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && previousModeRef.current) {
+        setToolMode(previousModeRef.current);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [toolMode, setToolMode]);
 
   // Sync initialCanvasId from props
   useEffect(() => {
@@ -134,109 +152,123 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     []
   );
 
-  // Explode Mode: Dökümanın Section'larını Dairesel Olarak Tuvale Aç
-  const handleExplodeSections = useCallback(
-    async (documentId: string, docNodeId: string) => {
+  const handleShapeResizeStop = useCallback(
+    async (itemId: string, width: number, height: number, x: number, y: number) => {
       try {
-        const currentNodes = getNodes();
-        const docNode = currentNodes.find((n) => n.id === docNodeId);
-        const centerPos = docNode ? docNode.position : { x: 300, y: 300 };
-
-        const reportData = await getDocumentReport(documentId);
-        const sections = reportData.sections || [];
-
-        if (sections.length === 0) {
-          alert('Bu makale için henüz rapor bölümü üretilmemiş.');
-          return;
-        }
-
-        const radius = 340;
-        const total = sections.length;
-        const newNodes: Node<SectionBoxNodeData>[] = [];
-
-        for (let i = 0; i < total; i++) {
-          const sec = sections[i];
-          const angle = (2 * Math.PI * i) / total - Math.PI / 2;
-          const posX = Math.round(centerPos.x + radius * Math.cos(angle));
-          const posY = Math.round(centerPos.y + radius * Math.sin(angle));
-          const secId = (sec as any).id || sec.group_id || `sec-${i}`;
-          const cType = sec.content_type || (sec as any).section_type || 'prose';
-          const secOrder = (sec as any).order || i + 1;
-
-          const savedItem = await addCanvasItem(
-            activeCanvasId,
-            'section_box',
-            posX,
-            posY,
-            documentId,
-            {
-              section_id: secId,
-              title: sec.title,
-              content_type: cType,
-              content: sec.content,
-              order: secOrder,
-              document_id: documentId,
-            }
-          );
-
-          newNodes.push({
-            id: savedItem.id,
-            type: 'section_box',
-            position: { x: posX, y: posY },
-            data: {
-              section_id: secId,
-              document_id: documentId,
-              title: sec.title,
-              content_type: cType,
-              content: sec.content,
-              order: secOrder,
-              onRemoveFromCanvas: () => handleDeleteItem(savedItem.id),
-            },
-          });
-        }
-
-        // Döküman kutusunu açık moda güncelle
-        setNodes((nds) => [
-          ...nds.map((n) =>
-            n.id === docNodeId
-              ? { ...n, data: { ...n.data, is_exploded: true } }
-              : n
-          ),
-          ...newNodes,
-        ]);
-      } catch (err: any) {
-        alert(err.message || 'Bölümler açılamadı.');
+        await updateCanvasItem(itemId, {
+          position_x: Math.round(x),
+          position_y: Math.round(y),
+          content: {
+            width: Math.round(width),
+            height: Math.round(height),
+          },
+        });
+      } catch {
+        // sessiz hata
       }
     },
-    [activeCanvasId, handleDeleteItem, getNodes, setNodes]
+    []
   );
 
-  // Collapse Mode: Dökümana ait Section kutularını tuvalden topla
-  const handleCollapseSections = useCallback(
-    async (documentId: string) => {
+  const handleShapeColorChange = useCallback(
+    async (itemId: string, color: string) => {
       try {
-        const currentNodes = getNodes();
-        const toRemove = currentNodes.filter(
-          (n) => n.type === 'section_box' && n.data?.document_id === documentId
-        );
-        for (const item of toRemove) {
-          await deleteCanvasItem(item.id).catch(() => {});
-        }
-
+        await updateCanvasItem(itemId, { content: { color } });
         setNodes((nds) =>
-          nds
-            .filter((n) => !(n.type === 'section_box' && n.data?.document_id === documentId))
-            .map((n) =>
-              n.type === 'document_box' && n.data?.documentId === documentId
-                ? { ...n, data: { ...n.data, is_exploded: false } }
-                : n
-            )
+          nds.map((n) =>
+            n.id === itemId
+              ? { ...n, data: { ...n.data, color } }
+              : n
+          )
         );
-      } catch (err: any) {
-        alert(err.message || 'Bölümler toplanamadı.');
+      } catch {
+        // sessiz hata
       }
     },
-    [getNodes, setNodes]
+    [setNodes]
+  );
+
+  const handleRenameDocumentTitle = useCallback(
+    async (itemId: string, newTitle: string) => {
+      try {
+        await updateCanvasItem(itemId, { content: { title: newTitle } });
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === itemId
+              ? { ...n, data: { ...n.data, title: newTitle } }
+              : n
+          )
+        );
+      } catch {
+        // sessiz hata
+      }
+    },
+    [setNodes]
+  );
+
+  const handleRenameSectionTitle = useCallback(
+    async (itemId: string, newTitle: string) => {
+      try {
+        await updateCanvasItem(itemId, { content: { title: newTitle } });
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === itemId
+              ? { ...n, data: { ...n.data, title: newTitle } }
+              : n
+          )
+        );
+      } catch {
+        // sessiz hata
+      }
+    },
+    [setNodes]
+  );
+
+  const handleToggleExpandSection = useCallback(
+    async (itemId: string, isExpanded: boolean) => {
+      try {
+        await updateCanvasItem(itemId, { content: { is_expanded: isExpanded } });
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === itemId
+              ? { ...n, data: { ...n.data, is_expanded: isExpanded } }
+              : n
+          )
+        );
+      } catch {
+        // sessiz hata
+      }
+    },
+    [setNodes]
+  );
+
+  const handleSectionResizeStop = useCallback(
+    async (itemId: string, width: number, height: number, x: number, y: number) => {
+      try {
+        await updateCanvasItem(itemId, {
+          position_x: Math.round(x),
+          position_y: Math.round(y),
+          content: {
+            width: Math.round(width),
+            height: Math.round(height),
+          },
+        });
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === itemId
+              ? {
+                  ...n,
+                  style: { ...n.style, width, height },
+                  data: { ...n.data, width, height },
+                }
+              : n
+          )
+        );
+      } catch {
+        // sessiz hata
+      }
+    },
+    [setNodes]
   );
 
   // Custom Node Tipleri
@@ -280,26 +312,36 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
               itemId: item.id,
               added_by: item.added_by,
               is_own: item.is_own ?? true,
-              is_exploded: false,
               onOpenReport: onSelectDocument,
               onDeleteItem: handleDeleteItem,
-              onExplodeSections: handleExplodeSections,
-              onCollapseSections: handleCollapseSections,
+              onRenameTitle: handleRenameDocumentTitle,
             },
           });
         } else if (item.item_type === 'section_box') {
+          const w = item.content?.width;
+          const h = item.content?.height;
           flowNodes.push({
             id: item.id,
             type: 'section_box',
             position: { x: item.position_x, y: item.position_y },
+            style: w && h ? { width: w, height: h } : undefined,
             data: {
               section_id: item.ref_id || item.id,
+              itemId: item.id,
               document_id: item.content?.document_id,
               title: item.content?.title || 'Bölüm',
               content_type: item.content?.content_type || 'prose',
-              content: item.content?.content || {},
+              content: item.content?.content || item.content || {},
               order: item.content?.order || 1,
+              width: w,
+              height: h,
+              is_expanded: item.content?.is_expanded || false,
+              figures: item.content?.figures || [],
+              key_finding: item.content?.key_finding,
               onRemoveFromCanvas: () => handleDeleteItem(item.id),
+              onResizeStop: handleSectionResizeStop,
+              onToggleExpand: handleToggleExpandSection,
+              onRenameTitle: handleRenameSectionTitle,
             },
           });
         } else if (item.item_type === 'sticky_note') {
@@ -342,14 +384,22 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
             },
           });
         } else if (item.item_type === 'shape') {
+          const w = item.content?.width || 180;
+          const h = item.content?.height || 110;
           flowNodes.push({
             id: item.id,
             type: 'shape',
             position: { x: item.position_x, y: item.position_y },
+            style: { width: w, height: h },
             data: {
               shape_type: item.content?.shape_type || 'rectangle',
               color: item.content?.color || 'neutral',
               background: item.content?.background,
+              width: w,
+              height: h,
+              itemId: item.id,
+              onResizeStop: handleShapeResizeStop,
+              onColorChange: handleShapeColorChange,
             },
           });
         } else if (item.item_type === 'note') {
@@ -395,8 +445,12 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     handleDeleteItem,
     handleUpdateNoteText,
     handleUpdateNoteColor,
-    handleExplodeSections,
-    handleCollapseSections,
+    handleShapeResizeStop,
+    handleShapeColorChange,
+    handleRenameDocumentTitle,
+    handleRenameSectionTitle,
+    handleToggleExpandSection,
+    handleSectionResizeStop,
     isDark,
     setNodes,
     setEdges,
@@ -405,6 +459,38 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  // Hook 1: Klavye Kısayolları (Copy / Paste)
+  useCanvasShortcuts({
+    activeCanvasId,
+    getNodes,
+    setNodes,
+  });
+
+  // Hook 2: Çizim ve Sürükle-Bırak Şekil Mantığı
+  const {
+    isDrawing,
+    currentPathPoints,
+    shapeDragStart,
+    shapeDragCurrent,
+    handleCanvasClick,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+  } = useCanvasDrawing({
+    toolMode,
+    setToolMode,
+    activeShapeType,
+    activeColor,
+    activeCanvasId,
+    isDark,
+    screenToFlowPosition,
+    reactFlowWrapper,
+    setNodes,
+    handleUpdateNoteText,
+    handleDeleteItem,
+    handleShapeResizeStop,
+  });
 
   // Sürükleyip bırakma durduğunda koordinatları PostgreSQL'e kaydet
   const onNodeDragStop: NodeDragHandler = useCallback(
@@ -508,7 +594,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     []
   );
 
-  // 3. Canvas Yönetim İşlemleri (Sekmeler)
+  // Canvas Yönetim İşlemleri (Sekmeler)
   const handleCreateCanvas = async () => {
     const name = window.prompt('Yeni Canvas sayfasının adını girin:', 'Yeni Canvas');
     if (!name || !name.trim()) return;
@@ -549,7 +635,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     }
   };
 
-  // 4. Kutucuk, Şekil, Metin ve Not Ekleme
+  // Kutucuk, Şekil, Metin ve Not Ekleme
   const handleAddDocumentToCanvas = async (doc: DocumentSummary) => {
     const posX = 150 + Math.random() * 80;
     const posY = 150 + Math.random() * 80;
@@ -575,8 +661,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
           itemId: newItem.id,
           onOpenReport: onSelectDocument,
           onDeleteItem: handleDeleteItem,
-          onExplodeSections: handleExplodeSections,
-          onCollapseSections: handleCollapseSections,
+          onRenameTitle: handleRenameDocumentTitle,
         },
       };
 
@@ -647,11 +732,16 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         position: { x: newItem.position_x, y: newItem.position_y },
         data: {
           section_id: newItem.id,
+          itemId: newItem.id,
           title,
           content_type: contentType,
           content,
           order: 1,
+          is_expanded: false,
           onRemoveFromCanvas: () => handleDeleteItem(newItem.id),
+          onResizeStop: handleSectionResizeStop,
+          onToggleExpand: handleToggleExpandSection,
+          onRenameTitle: handleRenameSectionTitle,
         },
       };
 
@@ -661,190 +751,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     }
   };
 
-  // 5. Tuval Tıklama ve Çizim Olayları (Tool Mode Handling)
-  const handleCanvasClick = async (e: React.MouseEvent) => {
-    // Şekil veya Metin modundaysa tıklanan tam koordinata eleman ekle
-    if (toolMode === 'shape') {
-      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      try {
-        const newItem = await addCanvasItem(
-          activeCanvasId,
-          'shape',
-          Math.round(pos.x),
-          Math.round(pos.y),
-          null,
-          { shape_type: activeShapeType, color: activeColor || 'neutral', width: 140, height: 80 }
-        );
-
-        const newNode: Node<ShapeNodeData> = {
-          id: newItem.id,
-          type: 'shape',
-          position: { x: pos.x, y: pos.y },
-          data: {
-            shape_type: activeShapeType,
-            color: activeColor || 'neutral',
-          },
-        };
-
-        setNodes((nds) => [...nds, newNode]);
-      } catch (err: any) {
-        console.warn('Şekil eklenemedi:', err);
-      }
-      // NOT: toolMode 'shape' olarak KALIR, kullanıcı başka araç seçene kadar peş peşe şekil ekleyebilir
-    } else if (toolMode === 'text') {
-      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      try {
-        const newItem = await addCanvasItem(
-          activeCanvasId,
-          'text',
-          Math.round(pos.x),
-          Math.round(pos.y),
-          null,
-          { text: '' }
-        );
-
-        const newNode: Node<TextNodeData> = {
-          id: newItem.id,
-          type: 'text',
-          position: { x: pos.x, y: pos.y },
-          data: {
-            text: '',
-            itemId: newItem.id,
-            onTextChange: (newText: string) => handleUpdateNoteText(newItem.id, newText),
-            onDelete: () => handleDeleteItem(newItem.id),
-          },
-        };
-
-        setNodes((nds) => [...nds, newNode]);
-      } catch (err: any) {
-        console.warn('Metin kutusu eklenemedi:', err);
-      }
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (toolMode === 'pen') {
-      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      setIsDrawing(true);
-      setCurrentPathPoints([{ x: pos.x, y: pos.y }]);
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (toolMode === 'pen' && isDrawing) {
-      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      setCurrentPathPoints((prev) => [...prev, { x: pos.x, y: pos.y }]);
-    }
-  };
-
-  const handleMouseUp = async () => {
-    if (toolMode !== 'pen' || !isDrawing || currentPathPoints.length < 2) {
-      setIsDrawing(false);
-      setCurrentPathPoints([]);
-      return;
-    }
-
-    setIsDrawing(false);
-
-    const minX = Math.min(...currentPathPoints.map((p) => p.x));
-    const minY = Math.min(...currentPathPoints.map((p) => p.y));
-    const maxX = Math.max(...currentPathPoints.map((p) => p.x));
-    const maxY = Math.max(...currentPathPoints.map((p) => p.y));
-    const width = Math.max(20, maxX - minX);
-    const height = Math.max(20, maxY - minY);
-
-    const pathData = currentPathPoints
-      .map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${(p.x - minX).toFixed(1)} ${(p.y - minY).toFixed(1)}`)
-      .join(' ');
-
-    setCurrentPathPoints([]);
-
-    try {
-      const color = isDark ? '#FFFFFF' : '#0A0A0A';
-      const newItem = await addCanvasItem(
-        activeCanvasId,
-        'drawing',
-        minX,
-        minY,
-        null,
-        { path_data: pathData, width, height, color, stroke_width: 2 }
-      );
-
-      const newNode: Node<DrawingNodeData> = {
-        id: newItem.id,
-        type: 'drawing',
-        position: { x: minX, y: minY },
-        data: {
-          path_data: pathData,
-          color,
-          stroke_width: 2,
-          width,
-          height,
-        },
-      };
-
-      setNodes((nds) => [...nds, newNode]);
-    } catch (err: any) {
-      console.warn('Çizim kaydedilemedi:', err);
-    }
-  };
-
-  // 6. Klavye Kısayolları (Ctrl+C / Ctrl+V Kopyala-Yapıştır, Delete Toplu Silme)
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
-
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const isCopy = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'c';
-      const isPaste = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'v';
-
-      if (isCopy) {
-        const selected = getNodes().filter((n) => n.selected);
-        if (selected.length > 0) {
-          setCopiedNodes(selected);
-        }
-      }
-
-      if (isPaste && copiedNodes.length > 0) {
-        e.preventDefault();
-        const createdNodes: Node<any>[] = [];
-
-        for (const nodeToCopy of copiedNodes) {
-          const newPosX = nodeToCopy.position.x + 30;
-          const newPosY = nodeToCopy.position.y + 30;
-
-          try {
-            const newItem = await addCanvasItem(
-              activeCanvasId,
-              nodeToCopy.type || 'note',
-              newPosX,
-              newPosY,
-              nodeToCopy.data?.documentId || nodeToCopy.data?.section_id || null,
-              nodeToCopy.data
-            );
-
-            createdNodes.push({
-              ...nodeToCopy,
-              id: newItem.id,
-              position: { x: newPosX, y: newPosY },
-              selected: true,
-            });
-          } catch {
-            // sessiz devam
-          }
-        }
-
-        if (createdNodes.length > 0) {
-          setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), ...createdNodes]);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [copiedNodes, activeCanvasId, getNodes, setNodes]);
-
-  // 7. Envanterden Sürükle-Bırak (HTML5 Drag and Drop)
+  // Sürükle-Bırak Olayları (Hem Envanter Dokümanı hem de SectionPicker Bölümü)
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
@@ -855,43 +762,99 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       event.preventDefault();
 
       const docDataRaw = event.dataTransfer.getData('application/rnd-document');
-      if (!docDataRaw) return;
+      const sectionDataRaw = event.dataTransfer.getData('application/rnd-section');
 
-      try {
-        const doc = JSON.parse(docDataRaw);
-        const position = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const posX = Math.round(position.x);
+      const posY = Math.round(position.y);
 
-        const newItem = await addCanvasItem(
-          activeCanvasId,
-          'document_box',
-          Math.round(position.x),
-          Math.round(position.y),
-          doc.id,
-          { title: doc.original_filename }
-        );
+      // 1. Sürüklenebilir Section Menüsünden Bırakma
+      if (sectionDataRaw) {
+        try {
+          const sec = JSON.parse(sectionDataRaw);
+          const newItem = await addCanvasItem(
+            activeCanvasId,
+            'section_box',
+            posX,
+            posY,
+            sec.documentId,
+            {
+              section_id: sec.sectionId,
+              title: sec.title,
+              content_type: sec.contentType,
+              content: sec.content,
+              order: sec.order,
+              document_id: sec.documentId,
+              figures: sec.figures,
+              key_finding: sec.key_finding,
+              is_expanded: false,
+            }
+          );
 
-        const newNode: Node<DocumentBoxNodeData> = {
-          id: newItem.id,
-          type: 'document_box',
-          position: { x: newItem.position_x, y: newItem.position_y },
-          data: {
-            title: doc.original_filename,
-            status: doc.processing_status,
-            documentId: doc.id,
-            itemId: newItem.id,
-            onOpenReport: onSelectDocument,
-            onDeleteItem: handleDeleteItem,
-            onExplodeSections: handleExplodeSections,
-            onCollapseSections: handleCollapseSections,
-          },
-        };
+          const newNode: Node<SectionBoxNodeData> = {
+            id: newItem.id,
+            type: 'section_box',
+            position: { x: posX, y: posY },
+            data: {
+              section_id: sec.sectionId,
+              itemId: newItem.id,
+              document_id: sec.documentId,
+              title: sec.title,
+              content_type: sec.contentType,
+              content: sec.content,
+              order: sec.order,
+              figures: sec.figures,
+              key_finding: sec.key_finding,
+              is_expanded: false,
+              onRemoveFromCanvas: () => handleDeleteItem(newItem.id),
+              onResizeStop: handleSectionResizeStop,
+              onToggleExpand: handleToggleExpandSection,
+              onRenameTitle: handleRenameSectionTitle,
+            },
+          };
 
-        setNodes((nds) => [...nds, newNode]);
-      } catch (err: any) {
-        alert(err.message || 'Doküman canvas üzerine bırakılamadı.');
+          setNodes((nds) => [...nds, newNode]);
+        } catch (err: any) {
+          alert(err.message || 'Bölüm canvas üzerine bırakılamadı.');
+        }
+        return;
+      }
+
+      // 2. Envanterden Doküman Bırakma
+      if (docDataRaw) {
+        try {
+          const doc = JSON.parse(docDataRaw);
+          const newItem = await addCanvasItem(
+            activeCanvasId,
+            'document_box',
+            posX,
+            posY,
+            doc.id,
+            { title: doc.original_filename }
+          );
+
+          const newNode: Node<DocumentBoxNodeData> = {
+            id: newItem.id,
+            type: 'document_box',
+            position: { x: posX, y: posY },
+            data: {
+              title: doc.original_filename,
+              status: doc.processing_status,
+              documentId: doc.id,
+              itemId: newItem.id,
+              onOpenReport: onSelectDocument,
+              onDeleteItem: handleDeleteItem,
+              onRenameTitle: handleRenameDocumentTitle,
+            },
+          };
+
+          setNodes((nds) => [...nds, newNode]);
+        } catch (err: any) {
+          alert(err.message || 'Doküman canvas üzerine bırakılamadı.');
+        }
       }
     },
     [
@@ -899,8 +862,10 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       screenToFlowPosition,
       onSelectDocument,
       handleDeleteItem,
-      handleExplodeSections,
-      handleCollapseSections,
+      handleRenameDocumentTitle,
+      handleRenameSectionTitle,
+      handleToggleExpandSection,
+      handleSectionResizeStop,
       setNodes,
     ]
   );
@@ -915,12 +880,14 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       className={`relative w-screen h-screen overflow-hidden bg-white dark:bg-[#0A0A0A] transition-colors duration-200 ${
-        toolMode === 'pen'
+        toolMode === 'pan'
+          ? 'cursor-grab active:cursor-grabbing'
+          : toolMode === 'select'
+          ? 'cursor-default'
+          : toolMode === 'pen' || toolMode === 'shape' || toolMode === 'text'
           ? 'cursor-crosshair'
           : toolMode === 'eraser'
           ? 'cursor-pointer'
-          : toolMode === 'shape' || toolMode === 'text'
-          ? 'cursor-crosshair'
           : ''
       }`}
     >
@@ -962,13 +929,13 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         onEdgesDelete={onEdgesDelete}
         nodeTypes={nodeTypes}
         fitView
-        // Tool Mode Entegrasyonu
+        // Pan & Select Ayrımı
+        panOnDrag={toolMode === 'pan' ? [0, 1, 2] : [1, 2]}
         selectionOnDrag={toolMode === 'select'}
-        panOnDrag={toolMode === 'select' ? [1, 2] : false}
         selectionMode={SelectionMode.Partial}
         multiSelectionKeyCode="Shift"
-        nodesDraggable={toolMode === 'select'}
-        elementsSelectable={toolMode === 'select'}
+        nodesDraggable={toolMode === 'select' || toolMode === 'pan'}
+        elementsSelectable={toolMode === 'select' || toolMode === 'pan'}
         className="w-full h-full"
       >
         <Background
@@ -992,6 +959,107 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
           maskColor={isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'}
         />
       </ReactFlow>
+
+      {/* Şekil Sürükle-Bırak Canlı Önizleme Katmanı */}
+      {shapeDragStart && shapeDragCurrent && (
+        <div
+          className="absolute pointer-events-none z-30 transition-none"
+          style={{
+            left: Math.min(shapeDragStart.screenX, shapeDragCurrent.screenX),
+            top: Math.min(shapeDragStart.screenY, shapeDragCurrent.screenY),
+            width: Math.max(2, Math.abs(shapeDragCurrent.screenX - shapeDragStart.screenX)),
+            height: Math.max(2, Math.abs(shapeDragCurrent.screenY - shapeDragStart.screenY)),
+          }}
+        >
+          {activeShapeType === 'rectangle' && (
+            <div
+              className="w-full h-full rounded-xl"
+              style={{
+                border: `2px dashed ${
+                  activeColor === 'indigo'
+                    ? '#6366F1'
+                    : activeColor === 'emerald'
+                    ? '#10B981'
+                    : activeColor === 'amber'
+                    ? '#F59E0B'
+                    : activeColor === 'rose'
+                    ? '#F43F5E'
+                    : isDark
+                    ? '#E4E4E7'
+                    : '#71717A'
+                }`,
+                backgroundColor:
+                  activeColor === 'indigo'
+                    ? 'rgba(99, 102, 241, 0.15)'
+                    : activeColor === 'emerald'
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : activeColor === 'amber'
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : activeColor === 'rose'
+                    ? 'rgba(244, 63, 94, 0.15)'
+                    : 'rgba(113, 113, 122, 0.12)',
+              }}
+            />
+          )}
+          {activeShapeType === 'circle' && (
+            <div
+              className="w-full h-full rounded-full"
+              style={{
+                border: `2px dashed ${
+                  activeColor === 'indigo'
+                    ? '#6366F1'
+                    : activeColor === 'emerald'
+                    ? '#10B981'
+                    : activeColor === 'amber'
+                    ? '#F59E0B'
+                    : activeColor === 'rose'
+                    ? '#F43F5E'
+                    : isDark
+                    ? '#E4E4E7'
+                    : '#71717A'
+                }`,
+                backgroundColor:
+                  activeColor === 'indigo'
+                    ? 'rgba(99, 102, 241, 0.15)'
+                    : activeColor === 'emerald'
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : activeColor === 'amber'
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : activeColor === 'rose'
+                    ? 'rgba(244, 63, 94, 0.15)'
+                    : 'rgba(113, 113, 122, 0.12)',
+              }}
+            />
+          )}
+          {activeShapeType === 'arrow' && (
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <line
+                x1="5"
+                y1="50"
+                x2="85"
+                y2="50"
+                stroke={isDark ? '#E4E4E7' : '#71717A'}
+                strokeWidth="3"
+                strokeDasharray="4 4"
+              />
+              <polygon points="80,40 95,50 80,60" fill={isDark ? '#E4E4E7' : '#71717A'} />
+            </svg>
+          )}
+          {activeShapeType === 'line' && (
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <line
+                x1="5"
+                y1="50"
+                x2="95"
+                y2="50"
+                stroke={isDark ? '#E4E4E7' : '#71717A'}
+                strokeWidth="3"
+                strokeDasharray="4 4"
+              />
+            </svg>
+          )}
+        </div>
+      )}
 
       {/* Aktif Serbest Çizim Canlı Katmanı */}
       {isDrawing && currentPathPoints.length > 1 && (

@@ -70,9 +70,9 @@ SECTION_PROMPTS = {
             "2) o modülün ne yaptığını 1-2 cümlede açıkla. "
             "Matematiksel değişken/ifade geçiyorsa (örn. alt simge, üst simge, "
             "Yunan harfi, denklem referansı) MUTLAKA tek dolar işaretiyle "
-            "LaTeX formatında yaz, örn: $S_{\alpha\omega}(x_i)$, $k^*$, $C_m$. "
+            r"LaTeX formatında yaz, örn: $S_{\alpha\omega}(x_i)$, $k^*$, $C_m$. "
             "Düz metin içinde alt simge/üst simge/Yunan harfi ASLA çıplak "
-            "unicode olarak yazma (örn. 'Sαω(x_i)' YANLIŞ, '$S_{\alpha\omega}(x_i)$' DOĞRU). "
+            r"unicode olarak yazma (örn. 'Sαω(x_i)' YANLIŞ, '$S_{\alpha\omega}(x_i)$' DOĞRU). "
             "Ayrıca modüller arası veri akışını tek satırlık bir özet olarak "
             "flow_summary alanına yaz (örn. 'IN → Noise Processing → ... → OUT')."
         ),
@@ -116,9 +116,19 @@ SECTION_PROMPTS = {
 }
 
 
+KEY_FINDING_INSTRUCTION = (
+    "Ayrıca, bu bölümdeki en çarpıcı/orijinal bulguyu veya iddiayı 1-2 cümlede, "
+    "KENDİ CÜMLELERİNLE (kaynak metinden birebir kopyalamadan) özetleyip "
+    "key_finding alanına yaz. Eğer bu bölümde öne çıkan özgün bir bulgu yoksa "
+    "(örn. sadece tanım/arka plan veriyorsa), key_finding'i null bırak - HER "
+    "bölüme zorla bir bulgu uydurma."
+)
+
+
 def build_prompt(group_id: str) -> str:
-    """Merkezi prompt oluşturucu: Dil ve Matematik kurallarını tüm promptlara enjekte eder."""
+    """Merkezi prompt oluşturucu: Dil, Matematik ve Key Finding kurallarını tüm promptlara enjekte eder."""
     raw = SECTION_PROMPTS.get(group_id, {}).get("instruction", "")
     if not raw:
-        return f"{LANGUAGE_INSTRUCTION}\n\n{MATH_NOTATION_INSTRUCTION}\n\nBu bölüm için makaleden ilgili bilgileri özetle."
-    return f"{raw}\n\n{LANGUAGE_INSTRUCTION}\n\n{MATH_NOTATION_INSTRUCTION}"
+        return f"{LANGUAGE_INSTRUCTION}\n\n{MATH_NOTATION_INSTRUCTION}\n\n{KEY_FINDING_INSTRUCTION}\n\nBu bölüm için makaleden ilgili bilgileri özetle."
+    return f"{raw}\n\n{LANGUAGE_INSTRUCTION}\n\n{MATH_NOTATION_INSTRUCTION}\n\n{KEY_FINDING_INSTRUCTION}"
+

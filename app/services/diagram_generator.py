@@ -71,13 +71,14 @@ def generate_diagram_spec(section: FilledSection) -> GeneratedDiagram:
         f"- Maximum Nodes: {MAX_NODES}\n"
         f"- Keep node IDs short, lowercase, and alphanumeric without spaces (e.g. 'raw_data', 'transformer', 'loss').\n"
         f"- Use descriptive and concise labels in Turkish or English according to content language.\n"
-        f"- Connect nodes logically with directed edges."
+        f"- Connect nodes logically with directed edges.\n"
+        f"- Provide a 1-sentence caption in Turkish that gives a concise reading guide for the diagram without repeating the section body text."
     )
 
     user_prompt = (
         f"SECTION TITLE: {section.title}\n"
         f"CONTENT:\n{content_text}\n\n"
-        f"Generate the DiagramSpec with nodes and edges."
+        f"Generate the DiagramSpec with nodes, edges, and a 1-sentence caption."
     )
 
     from app.services.rate_limiter import execute_with_retry
@@ -122,9 +123,11 @@ def generate_diagram_spec(section: FilledSection) -> GeneratedDiagram:
         )
 
         return GeneratedDiagram(
-            section_id=section.group_id,
+            section_id=section.section_id,
+            group_id=section.group_id,
             mermaid_code=mermaid_code,
             spec=spec,
+            caption=spec.caption,
         )
     except Exception as e:
         # Hata durumunda boş/güvenli bir yedek spesifikasyon oluştur
@@ -133,12 +136,15 @@ def generate_diagram_spec(section: FilledSection) -> GeneratedDiagram:
             nodes=[fallback_node],
             edges=[],
             diagram_type=diagram_type,
+            caption=f"{section.title} şeması",
         )
         fallback_mermaid = spec_to_mermaid(fallback_spec)
         return GeneratedDiagram(
-            section_id=section.group_id,
+            section_id=section.section_id,
+            group_id=section.group_id,
             mermaid_code=fallback_mermaid,
             spec=fallback_spec,
+            caption=fallback_spec.caption,
         )
 
 

@@ -22,6 +22,7 @@ from app.db.repository import (
     ReportRepository,
     SectionRepository,
 )
+from app.models.figure import ExtractedFigure
 from app.models.paper_profile import PaperProfile
 from app.models.report_section import FilledSection, SourceReference
 from app.storage.object_store import get_presigned_url, upload_file
@@ -400,13 +401,29 @@ async def get_document_report(
             if isinstance(src, dict)
         ]
 
+        raw_figures = content.get("figures", [])
+        parsed_figures: list[ExtractedFigure] = []
+        for rf in raw_figures:
+            if isinstance(rf, dict):
+                try:
+                    parsed_figures.append(ExtractedFigure(**rf))
+                except Exception:
+                    pass
+
+        key_finding = content.get("key_finding")
+
         filled_sections.append(
             FilledSection(
+                id=str(s.id),
                 group_id=s.title.lower().replace(" ", "_"),
+                outline_id=str(s.id),
                 title=s.title,
                 content_type=s.section_type,
                 content=content,
+                order=s.order,
                 diagram=s.diagram,
+                figures=parsed_figures,
+                key_finding=key_finding,
                 sources=sources,
                 diagram_requested=s.diagram is not None,
             )

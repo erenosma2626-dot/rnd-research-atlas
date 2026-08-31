@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Download, FileDown, Loader2 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import {
   FilledSection,
   getDocumentReport,
@@ -46,6 +48,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
   const [reportError, setReportError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+  const [allCollapsed, setAllCollapsed] = useState<boolean | null>(null);
 
   const activeFilename = filename || polledFilename || 'Akademik Makale';
 
@@ -86,6 +89,49 @@ export const ReportPage: React.FC<ReportPageProps> = ({
         });
     }
   }, [status, documentId, paperProfile, loadingReport]);
+
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const handleDownloadReportPdf = async () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+
+    try {
+      // 1. Tüm bölümleri genişlet ki eksiksiz render edilsin
+      setAllCollapsed(false);
+
+      // 2. DOM ve KaTeX formüllerinin yerleşmesi için kısa bir bekleme
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      const reportElement = document.getElementById('report-printable-area');
+      if (!reportElement) {
+        setIsExportingPdf(false);
+        return;
+      }
+
+      const cleanFilename = activeFilename.replace(/\.pdf$/i, '').trim() || 'Arastirma';
+      const opt = {
+        margin: [12, 12, 12, 12] as [number, number, number, number],
+        filename: `${cleanFilename}_Rapor.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollY: 0,
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      };
+
+      await (html2pdf() as any).set(opt).from(reportElement).save();
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      alert('PDF dosyası üretilirken bir hata oluştu.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   const handleDownloadOriginal = async () => {
     try {
@@ -231,22 +277,31 @@ export const ReportPage: React.FC<ReportPageProps> = ({
             <h1 className="text-sm font-semibold truncate max-w-[200px] sm:max-w-md tracking-tight">{activeFilename}</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Raporu PDF İndir Button */}
+            <button
+              onClick={handleDownloadReportPdf}
+              disabled={isExportingPdf}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 active:scale-98 transition-all shadow-2xs"
+              title="Raporu PDF dosyası olarak indir"
+            >
+              {isExportingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileDown className="w-3.5 h-3.5" />
+              )}
+              <span>{isExportingPdf ? 'PDF Hazırlanıyor...' : 'PDF İndir'}</span>
+            </button>
+
             {/* Orijinal PDF İndir Button */}
             <button
               onClick={handleDownloadOriginal}
               disabled={downloadingPdf}
-              className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium rounded-full border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+              title="Yüklenen orijinal PDF'i aç / indir"
             >
-              <svg className="w-3.5 h-3.5 text-black/60 dark:text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-              {downloadingPdf ? 'Alınıyor...' : 'Orijinal PDF'}
+              <Download className="w-3.5 h-3.5 text-black/60 dark:text-white/60" />
+              <span>{downloadingPdf ? 'Alınıyor...' : 'Orijinal PDF'}</span>
             </button>
 
             {/* Theme Toggle Button */}
@@ -279,7 +334,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
             {/* Control Panel Drawer Toggle */}
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] text-xs font-medium rounded-full hover:opacity-90 active:scale-98 shadow-xs transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] dark:hover:bg-white/[0.15] text-[#0A0A0A] dark:text-white text-xs font-medium rounded-full active:scale-98 transition-all"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -296,7 +351,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
       </header>
 
       {/* Main Workspace */}
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main id="report-printable-area" className="max-w-4xl mx-auto px-6 py-12">
         {/* Document Header & Profile Badges */}
         <div className="mb-12 pb-8 border-b border-black/[0.06] dark:border-white/[0.08]">
           <div className="flex items-center gap-2 mb-3">
@@ -315,10 +370,43 @@ export const ReportPage: React.FC<ReportPageProps> = ({
           </p>
         </div>
 
+        {/* Header Summary & Actions */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-xs font-mono text-black/50 dark:text-white/50">
+            Toplam {sections.length} Bölüm
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadReportPdf}
+              disabled={isExportingPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-black/[0.08] dark:border-white/[0.1] text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+              title="Raporu PDF olarak indir"
+            >
+              {isExportingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+              ) : (
+                <FileDown className="w-3.5 h-3.5 text-indigo-500" />
+              )}
+              <span>{isExportingPdf ? 'İndiriliyor...' : 'Raporu PDF İndir'}</span>
+            </button>
+            <button
+              onClick={() => setAllCollapsed((prev: boolean | null) => (prev === true ? false : true))}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            >
+              {allCollapsed ? 'Tümünü Genişlet' : 'Tümünü Daralt'}
+            </button>
+          </div>
+        </div>
+
         {/* Section Cards */}
         <div className="space-y-8">
-          {sections.map((section, idx) => (
-            <SectionCard key={section.group_id || idx} section={section} index={idx} />
+          {sections.map((section: FilledSection, idx: number) => (
+            <SectionCard
+              key={`${section.outline_id || section.group_id || idx}-${allCollapsed}`}
+              section={section}
+              index={idx}
+              defaultCollapsed={allCollapsed === true}
+            />
           ))}
         </div>
       </main>
@@ -330,7 +418,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
         documentId={documentId}
         originalSections={sections}
         controlPanelState={{
-          candidates: sections.map((s, idx) => {
+          candidates: sections.map((s: FilledSection, idx: number) => {
             const previewText = typeof s.content === 'object' && s.content !== null
               ? (s.content.text || JSON.stringify(s.content))
               : String(s.content || '');

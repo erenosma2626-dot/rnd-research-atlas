@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { ShapeType } from './ShapeNode';
 
-export type ToolMode = 'select' | 'pen' | 'eraser' | 'shape' | 'text';
+export type ToolMode = 'pan' | 'select' | 'pen' | 'eraser' | 'shape' | 'text';
 
 interface ToolModeContextType {
   toolMode: ToolMode;
@@ -13,7 +13,7 @@ interface ToolModeContextType {
 }
 
 const ToolModeContext = createContext<ToolModeContextType>({
-  toolMode: 'select',
+  toolMode: 'pan',
   setToolMode: () => {},
   activeShapeType: 'rectangle',
   setActiveShapeType: () => {},
@@ -22,7 +22,7 @@ const ToolModeContext = createContext<ToolModeContextType>({
 });
 
 export const ToolModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toolMode, setToolMode] = useState<ToolMode>('select');
+  const [toolMode, setToolMode] = useState<ToolMode>('pan');
   const [activeShapeType, setActiveShapeType] = useState<ShapeType>('rectangle');
   const [activeColor, setActiveColor] = useState<string>('neutral');
 

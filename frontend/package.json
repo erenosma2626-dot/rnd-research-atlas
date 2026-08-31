@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.112.4",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.1",
+    "html2pdf.js": "^0.14.0",
     "katex": "^0.16.21",
     "lucide-react": "^1.16.0",
     "mermaid": "^11.4.1",
@@ -32,6 +33,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@types/html2pdf.js": "^0.10.0",
     "@types/katex": "^0.16.7",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

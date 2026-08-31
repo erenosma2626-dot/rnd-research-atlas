@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import tempfile
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -56,15 +57,30 @@ async def _async_process_document(document_id: str, file_path: str, project_id: 
             doc_repo = DocumentRepository(session)
 
             try:
+                # Eğer file_path yerel diskte yoksa (örn: ayrı Docker worker konteyneri veya sunucu), MinIO'dan indir
+                actual_file_path = file_path
+                if not os.path.exists(actual_file_path):
+                    doc = await doc_repo.get_by_id(doc_uuid)
+                    storage_path = getattr(doc, "storage_path", None)
+                    if storage_path and isinstance(storage_path, str):
+                        temp_dir = tempfile.gettempdir()
+                        local_download_path = os.path.join(temp_dir, f"doc_{doc_uuid}.pdf")
+                        from app.storage.object_store import download_file
+                        try:
+                            download_file(storage_path, local_download_path)
+                            actual_file_path = local_download_path
+                        except Exception as dl_err:
+                            logger.warning(f"MinIO'dan dosya indirme uyarısı: {dl_err}")
+
                 # 1. Aşama: parsing (Docling PDF ayrıştırma & Figür çıkarma)
                 await doc_repo.update_status(doc_uuid, "parsing")
                 await session.commit()
-                parsed_doc = parse_pdf(file_path)
+                parsed_doc = parse_pdf(actual_file_path)
 
                 # Figürleri / şemaları ayıkla
                 figures = []
                 try:
-                    figures = extract_figures(file_path, document_id)
+                    figures = extract_figures(actual_file_path, document_id)
                     parsed_doc.figures = figures
                 except Exception as fig_err:
                     logger.warning(f"Figür çıkarma hatası: {fig_err}")
@@ -92,11 +108,30 @@ async def _async_process_document(document_id: str, file_path: str, project_id: 
                 index_document(document_id, parsed_doc)
                 active_section_schemas = route_sections(profile)
 
+                # Adaptif Anlatı Taslağı (Narrative Outline)
+                from app.services.narrative_outline import generate_narrative_outline
+                narrative_outline = generate_narrative_outline(parsed_doc, profile, active_section_schemas)
+
                 # Aday Bölümleri ve Figürleri hazırla
-                from app.services.control_panel import build_plan_candidates
+                from app.config.diagram_eligibility import is_diagram_eligible
                 from app.storage.object_store import get_presigned_url
 
-                candidate_sections = build_plan_candidates(active_section_schemas)
+                candidate_sections: list[SectionCandidate] = []
+                for idx, n in enumerate(narrative_outline):
+                    diag_avail = is_diagram_eligible(n.category)
+                    candidate_sections.append(
+                        SectionCandidate(
+                            section_id=n.outline_id,
+                            section_title=n.title,
+                            title=n.title,
+                            detected=True,
+                            included=True,
+                            order=idx + 1,
+                            diagram_available=diag_avail,
+                            diagram_included=diag_avail,
+                            content_preview=n.planning_description or f"{n.title} ({n.category}) analizi",
+                        )
+                    )
 
                 candidate_figures: list[FigureCandidate] = []
                 for idx, f in enumerate(figures):
@@ -109,6 +144,7 @@ async def _async_process_document(document_id: str, file_path: str, project_id: 
                             figure_id=f.figure_id,
                             caption=f.caption,
                             image_url=img_url,
+                            page=getattr(f, "page", 1),
                             included=True,
                             order=idx + 1,
                         )
@@ -121,6 +157,7 @@ async def _async_process_document(document_id: str, file_path: str, project_id: 
                     extracted_figures=candidate_figures,
                     paper_profile=profile.model_dump(),
                     parsed_doc=parsed_doc.model_dump(),
+                    narrative_sections=[n.model_dump() for n in narrative_outline],
                 )
                 await doc_repo.update_plan_state(doc_uuid, plan_state.model_dump())
 
@@ -166,6 +203,15 @@ async def _async_generate_final_report(document_id: str, approved_plan_dict: dic
                 raw_profile = plan_state.paper_profile if plan_state and plan_state.paper_profile else {}
                 profile = PaperProfile(**raw_profile) if raw_profile else PaperProfile(domain="generic", sub_domain=None)
 
+                # Parsed doc snapshot'ından geri yükle
+                parsed_doc_data = plan_state.parsed_doc if plan_state and plan_state.parsed_doc else None
+                parsed_doc = ParsedDocument(**parsed_doc_data) if parsed_doc_data else None
+
+                # Narrative sections yükle
+                from app.services.narrative_outline import NarrativeSection
+                raw_narratives = plan_state.narrative_sections if plan_state and plan_state.narrative_sections else []
+                narratives = [NarrativeSection(**n) for n in raw_narratives] if raw_narratives else []
+
                 # Dahil edilecek bölümleri filtrele
                 included_section_ids = (
                     [s.section_id for s in plan_state.active_sections if s.included]
@@ -176,11 +222,20 @@ async def _async_generate_final_report(document_id: str, approved_plan_dict: dic
                 all_schemas = route_sections(profile)
                 if included_section_ids:
                     active_schemas = [s for s in all_schemas if s.group_id in included_section_ids]
-                    # Kullanıcı sıralamasına göre sırala
                     order_map = {s.section_id: s.order for s in plan_state.active_sections}
                     active_schemas.sort(key=lambda s: order_map.get(s.group_id, 999))
                 else:
                     active_schemas = all_schemas
+
+                if narratives:
+                    if included_section_ids:
+                        included_narratives = [n for n in narratives if n.outline_id in included_section_ids]
+                        order_map = {s.section_id: s.order for s in plan_state.active_sections}
+                        included_narratives.sort(key=lambda n: order_map.get(n.outline_id, 999))
+                    else:
+                        included_narratives = narratives
+                else:
+                    included_narratives = []
 
                 # Görselleri hazırla
                 included_figures = []
@@ -188,7 +243,7 @@ async def _async_generate_final_report(document_id: str, approved_plan_dict: dic
                     included_figures = [
                         ExtractedFigure(
                             figure_id=f.figure_id,
-                            page=getattr(f, "order", 1),
+                            page=getattr(f, "page", getattr(f, "order", 1)),
                             caption=f.caption,
                             image_storage_path=f.image_url,
                             image_url=f.image_url,
@@ -197,31 +252,22 @@ async def _async_generate_final_report(document_id: str, approved_plan_dict: dic
                         if f.included
                     ]
 
-                # Parsed doc snapshot'ından geri yükle
-                parsed_doc_data = plan_state.parsed_doc if plan_state and plan_state.parsed_doc else None
-                parsed_doc = ParsedDocument(**parsed_doc_data) if parsed_doc_data else None
-
-                # Slot Doldurma
+                # Slot Doldurma (Adaptif Anlatı + Bağlamsal Figür Yerleşimi)
                 filled_sections = fill_all_sections(
                     document_id=document_id,
                     active_groups=active_schemas,
                     parsed_doc=parsed_doc,
                     paper_profile=profile,
+                    narrative_sections=included_narratives,
+                    extracted_figures=included_figures,
                 )
-
-                # Figür galerisi bölümünü ekle / güncelle
-                if included_figures and not any(s.content_type == "image_gallery" for s in filled_sections):
-                    from app.services.slot_filler import fill_paper_figures_section
-                    gallery_sec = fill_paper_figures_section(included_figures, document_id)
-                    if gallery_sec:
-                        filled_sections.append(gallery_sec)
 
                 # Diyagram Üretimi (diagram_included=True olanlar için)
                 diagram_map = {}
                 if plan_state:
                     diag_req_ids = {s.section_id for s in plan_state.active_sections if s.diagram_included}
                     for sec in filled_sections:
-                        sec.diagram_requested = bool(sec.group_id in diag_req_ids)
+                        sec.diagram_requested = bool(sec.section_id in diag_req_ids or sec.group_id in diag_req_ids)
                     
                     secs_to_generate = [s for s in filled_sections if s.diagram_requested]
                     generated_diagrams = generate_diagrams_batch(secs_to_generate)
@@ -238,9 +284,13 @@ async def _async_generate_final_report(document_id: str, approved_plan_dict: dic
                     {
                         "content_type": sec.content_type,
                         "title": sec.title,
-                        "content": sec.content,
+                        "content": {
+                            **sec.content,
+                            "key_finding": sec.key_finding,
+                            "figures": [f.model_dump() for f in sec.figures] if sec.figures else [],
+                        },
                         "order": idx + 1,
-                        "diagram": diagram_map.get(sec.group_id),
+                        "diagram": diagram_map.get(sec.section_id) or diagram_map.get(sec.group_id),
                     }
                     for idx, sec in enumerate(filled_sections)
                 ]

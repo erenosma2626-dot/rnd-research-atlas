@@ -79,6 +79,11 @@ class PaperProfile(BaseModel):
         default=0.9, ge=0.0, le=1.0, description="Modelin kendi kararına genel güveni (0.0 - 1.0 arası)"
     )
 
+    @property
+    def domain(self) -> str:
+        return self.primary_domain
+
+
 
 class ClassifyRequest(BaseModel):
     """POST /classify endpoint'i için istek şeması."""

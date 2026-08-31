@@ -97,6 +97,9 @@ class ProseContent(BaseModel):
     """Düz metin (prose) çıktısı için şema."""
 
     text: str = Field(..., description="Teknik ve detaylı açıklama metni")
+    key_finding: Optional[str] = Field(
+        default=None, description="Bu bölüme özgü 1-2 cümlelik öne çıkan bulgu/çıkarım (varsa)"
+    )
 
 
 class TableContent(BaseModel):
@@ -104,12 +107,18 @@ class TableContent(BaseModel):
 
     columns: list[str] = Field(..., description="Tablo sütun başlıkları")
     rows: list[list[str]] = Field(..., description="Tablo satır değerleri")
+    key_finding: Optional[str] = Field(
+        default=None, description="Bu bölüme özgü 1-2 cümlelik öne çıkan bulgu/çıkarım (varsa)"
+    )
 
 
 class ListContent(BaseModel):
     """Liste (list) çıktısı için şema."""
 
     items: list[str] = Field(..., description="Madde madde liste elemanları")
+    key_finding: Optional[str] = Field(
+        default=None, description="Bu bölüme özgü 1-2 cümlelik öne çıkan bulgu/çıkarım (varsa)"
+    )
 
 
 class ImageGalleryItem(BaseModel):
@@ -125,6 +134,7 @@ class ImageGalleryContent(BaseModel):
     """Görsel galerisi çıktısı için şema."""
 
     images: list[ImageGalleryItem] = Field(default_factory=list)
+    key_finding: Optional[str] = Field(default=None, description="Öne çıkan görsel bulgusu")
 
 
 def get_response_model_for_type(content_type: str) -> type[BaseModel]:
@@ -317,11 +327,13 @@ def fill_section(
         )
 
         content_dict = raw_result.model_dump()
+        key_finding = content_dict.pop("key_finding", None) or getattr(raw_result, "key_finding", None)
         return FilledSection(
             group_id=group.group_id,
             title=group.title,
             content_type=content_type,
             content=content_dict,
+            key_finding=key_finding,
             sources=sources,
         )
     except Exception as e:
@@ -338,17 +350,174 @@ def fill_section(
         )
 
 
+def fill_narrative_section(
+    narrative: Any,
+    document_id: str,
+    parsed_doc: Optional[ParsedDocument] = None,
+    extracted_formulas: Optional[list[ExtractedFormula]] = None,
+    paper_profile: Optional[PaperProfile] = None,
+    figures: Optional[list[ExtractedFigure]] = None,
+) -> FilledSection:
+    """Tek bir adaptif NarrativeSection için içerik üretir."""
+    category = getattr(narrative, "category", "system_architecture")
+    outline_id = getattr(narrative, "outline_id", category)
+    title = getattr(narrative, "title", category)
+    order = getattr(narrative, "order", 1)
+    source_sections = getattr(narrative, "source_docling_sections", [])
+
+    prompt_cfg = SECTION_PROMPTS.get(
+        category,
+        {
+            "content_type": "prose",
+            "instruction": f"{title} konusundaki detayları ve analizleri özetle.",
+        },
+    )
+    content_type = prompt_cfg["content_type"]
+    instruction = build_prompt(category)
+
+    # 1. Retrieval
+    query_text = f"{title} {' '.join(source_sections)} {prompt_cfg['instruction']}"
+    retrieved_chunks = query_document(
+        document_id=document_id,
+        query=query_text,
+        n_results=4,
+    )
+
+    sources: list[SourceReference] = []
+    seen_sources = set()
+    context_blocks = []
+
+    for chunk in retrieved_chunks:
+        context_blocks.append(chunk["content"])
+        meta = chunk.get("metadata", {})
+        page = meta.get("page_start", 1)
+        sec_title = meta.get("section_title", "General")
+        key = (page, sec_title)
+        if key not in seen_sources:
+            seen_sources.add(key)
+            sources.append(SourceReference(page=page, section_title=sec_title))
+
+    if not context_blocks:
+        context_text = parsed_doc.raw_markdown[:4000] if parsed_doc else f"{title} bölüm içeriği."
+        sources.append(SourceReference(page=1, section_title="Document Overview"))
+    else:
+        context_text = "\n\n---\n\n".join(context_blocks)
+
+    if category == "quantitative_results" or content_type == "chart":
+        chart_data = extract_chart_data(document_id, retrieved_chunks, parsed_doc)
+        if chart_data:
+            return FilledSection(
+                group_id=category,
+                outline_id=outline_id,
+                title=title,
+                content_type="chart",
+                content=chart_data.model_dump(),
+                order=order,
+                figures=figures or [],
+                key_finding=chart_data.caption,
+                sources=sources,
+            )
+        else:
+            content_type = "table"
+
+    formula_context = ""
+    has_heavy = paper_profile.has_heavy_notation if paper_profile else False
+    if extracted_formulas and (has_heavy or category in ["optimization_formulation", "method_steps"]):
+        valid_formulas = [f for f in extracted_formulas if f.latex_code]
+        if valid_formulas:
+            formula_lines = []
+            for f in valid_formulas[:5]:
+                conf_str = "(doğruluğu teyit edilmemiş)" if f.low_confidence else ""
+                formula_lines.append(f"- Sayfa {f.page}: $${f.latex_code}$$ {conf_str}")
+            formula_context = (
+                "\n\n--- ÇEVRİLMİŞ LATEX FORMÜLLERİ ---\n"
+                + "\n".join(formula_lines)
+                + "\nTalimat: Bu section için, yukarıda verilen çevrilmiş LaTeX formüllerinden (varsa) "
+                "en önemli 1-3 tanesini 'Anahtar Formüller' başlığı altında, sayfa referansıyla birlikte ekle.\n"
+            )
+
+    response_model = get_response_model_for_type(content_type)
+    user_prompt = (
+        f"SECTION TITLE: {title} (Kategori: {category})\n"
+        f"INSTRUCTION: {instruction}\n\n"
+        f"DOCUMENT RELEVANT CONTEXT:\n{context_text}\n"
+        f"{formula_context}\n"
+        f"Generate the exact structured content for this section in TURKISH."
+    )
+
+    try:
+        raw_result = call_llm_structured(
+            prompt=user_prompt,
+            response_model=response_model,
+            group_id=category,
+            call_type="slot_fill",
+        )
+
+        content_dict = raw_result.model_dump()
+        key_finding = content_dict.pop("key_finding", None) or getattr(raw_result, "key_finding", None)
+
+        return FilledSection(
+            group_id=category,
+            outline_id=outline_id,
+            title=title,
+            content_type=content_type,
+            content=content_dict,
+            order=order,
+            figures=figures or [],
+            key_finding=key_finding,
+            sources=sources,
+        )
+    except Exception as e:
+        logger.error(f"Narrative section {outline_id} ({title}) generation failed: {e}")
+        return FilledSection(
+            group_id=category,
+            outline_id=outline_id,
+            title=title,
+            content_type="error",
+            content={
+                "message": "Bu bölüm oluşturulurken bir hata oluştu. Lütfen yeniden deneyin.",
+                "error_details": str(e),
+            },
+            order=order,
+            figures=figures or [],
+            sources=sources,
+        )
+
+
 def fill_all_sections(
     document_id: str,
     active_groups: list[ActiveSectionGroup],
     parsed_doc: Optional[ParsedDocument] = None,
     extracted_formulas: Optional[list[ExtractedFormula]] = None,
     paper_profile: Optional[PaperProfile] = None,
+    narrative_sections: Optional[list[Any]] = None,
+    extracted_figures: Optional[list[ExtractedFigure]] = None,
 ) -> list[FilledSection]:
-    """Tüm aktif bölüm grupları için içerik üretir."""
+    """Tüm aktif bölüm grupları veya adaptif anlatı birimleri için içerik üretir."""
     filled_sections: list[FilledSection] = []
 
-    # 1. Makale Görselleri (Varsa doğrudan ekle)
+    # Adaptif Anlatı Modu (Varsa)
+    if narrative_sections and len(narrative_sections) > 0:
+        from app.services.narrative_outline import assign_figures_to_narrative
+
+        figs = extracted_figures or (parsed_doc.figures if parsed_doc and hasattr(parsed_doc, "figures") else [])
+        figure_assignment = assign_figures_to_narrative(figs, narrative_sections, parsed_doc)
+
+        for n_sec in narrative_sections:
+            sec_figs = figure_assignment.get(getattr(n_sec, "outline_id", ""), [])
+            filled_sec = fill_narrative_section(
+                narrative=n_sec,
+                document_id=document_id,
+                parsed_doc=parsed_doc,
+                extracted_formulas=extracted_formulas,
+                paper_profile=paper_profile,
+                figures=sec_figs,
+            )
+            filled_sections.append(filled_sec)
+
+        return filled_sections
+
+    # Standart Mod (Fallback)
     if parsed_doc and hasattr(parsed_doc, "figures") and parsed_doc.figures:
         figures_section = fill_paper_figures_section(parsed_doc.figures, document_id)
         filled_sections.append(figures_section)

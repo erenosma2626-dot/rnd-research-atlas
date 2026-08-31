@@ -3,6 +3,7 @@ import { Handle, NodeProps, Position } from 'reactflow';
 import { NodeResizer } from '@reactflow/node-resizer';
 import '@reactflow/node-resizer/dist/style.css';
 import { useTheme } from '../../theme/ThemeContext';
+import { CanvasColor, ColorPickerPopover } from './ColorPickerPopover';
 
 export type ShapeType = 'rectangle' | 'circle' | 'arrow' | 'line';
 
@@ -12,6 +13,9 @@ export interface ShapeNodeData {
   background?: string;
   width?: number;
   height?: number;
+  itemId?: string;
+  onResizeStop?: (id: string, width: number, height: number, x: number, y: number) => void;
+  onColorChange?: (id: string, newColor: string) => void;
 }
 
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
@@ -31,14 +35,33 @@ export const ShapeNode: React.FC<NodeProps<ShapeNodeData>> = memo(({ data, selec
   const fillColor = activeColor.fill;
 
   return (
-    <div className="relative group w-full h-full min-w-[40px] min-h-[40px]">
+    <div className="relative group w-full h-full min-w-[30px] min-h-[30px]">
       <NodeResizer
         isVisible={selected}
-        minWidth={40}
-        minHeight={40}
+        minWidth={30}
+        minHeight={30}
         lineClassName="border-[#0A0A0A] dark:border-white"
         handleClassName="h-2.5 w-2.5 bg-white dark:bg-[#0A0A0A] border-2 border-[#0A0A0A] dark:border-white rounded-xs"
+        onResizeEnd={(_e, params) => {
+          if (data.itemId && data.onResizeStop) {
+            data.onResizeStop(data.itemId, params.width, params.height, params.x, params.y);
+          }
+        }}
       />
+
+      {/* Floating Color Picker on Selection */}
+      {selected && data.onColorChange && (
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-50">
+          <ColorPickerPopover
+            activeColor={color}
+            onSelectColor={(newColor: CanvasColor) => {
+              if (data.itemId && data.onColorChange) {
+                data.onColorChange(data.itemId, newColor);
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* Target & Source Handles */}
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />

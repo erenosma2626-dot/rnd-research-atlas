@@ -203,7 +203,11 @@ async def full_pipeline_endpoint(
                 {
                     "content_type": sec.content_type,
                     "title": sec.title,
-                    "content": sec.content,
+                    "content": {
+                        **sec.content,
+                        "key_finding": sec.key_finding,
+                        "figures": [f.model_dump() for f in sec.figures] if sec.figures else [],
+                    },
                     "order": idx + 1,
                     "diagram": None,
                 }

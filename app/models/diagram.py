@@ -28,6 +28,9 @@ class DiagramSpec(BaseModel):
     diagram_type: str = Field(
         default="flowchart", description="Diyagram türü ('flowchart' | 'tree')"
     )
+    caption: Optional[str] = Field(
+        default=None, description="Diyagramın ne anlattığını özetleyen 1 cümlelik okuma notu"
+    )
 
 
 class GeneratedDiagram(BaseModel):
@@ -37,6 +40,9 @@ class GeneratedDiagram(BaseModel):
     group_id: Optional[str] = Field(default=None, description="Bölüm grubu kimliği takma adı")
     mermaid_code: str = Field(..., description="Render edilmeye hazır deterministik Mermaid.js kodu")
     spec: DiagramSpec = Field(..., description="Ham JSON graf özellikleri")
+    caption: Optional[str] = Field(
+        default=None, description="Diyagramın ne anlattığını özetleyen 1 cümlelik okuma notu"
+    )
 
     def __init__(self, **data: Any):
         if "group_id" in data and "section_id" not in data:
@@ -44,6 +50,8 @@ class GeneratedDiagram(BaseModel):
         super().__init__(**data)
         if not self.group_id:
             self.group_id = self.section_id
+        if not self.caption and self.spec and getattr(self.spec, "caption", None):
+            self.caption = self.spec.caption
 
 
 class GenerateDiagramRequest(BaseModel):

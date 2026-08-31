@@ -2,6 +2,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from app.models.document import ParsedDocument
+from app.models.figure import ExtractedFigure
 from app.models.formula import ExtractedFormula
 from app.models.paper_profile import PaperProfile
 from app.models.routing import ActiveSectionGroup
@@ -28,21 +29,31 @@ class ModuleListContent(BaseModel):
 
     modules: list[ModuleItem] = Field(default_factory=list)
     flow_summary: Optional[str] = Field(default=None, description="Modüller arası veri akışı özeti")
+    key_finding: Optional[str] = Field(default=None, description="Bu bölüme özgü öne çıkan bulgu/iddia")
 
 
 class FilledSection(BaseModel):
     """Doldurulmuş rapor bölümü nesnesi."""
 
+    id: Optional[str] = Field(default=None, description="Veritabanı Section UUID")
     group_id: str = Field(..., description="Bölüm grubu kimliği (örn: 'ml_experiment_table')")
-    title: str = Field(..., description="Bölüm grubu başlığı")
+    outline_id: Optional[str] = Field(default=None, description="Adaptif anlatı kimliği")
+    title: str = Field(..., description="Bölüm başlığı")
     content_type: str = Field(
         ..., description="İçerik türü ('prose' | 'table' | 'list' | 'module_list' | 'image_gallery' | 'chart' | 'error')"
     )
     content: dict[str, Any] = Field(
         ..., description="Yapılandırılmış içerik (prose: text, table: columns/rows, list: items, module_list: modules/flow_summary)"
     )
+    order: int = Field(default=1, description="Bölümün rapordaki doğal sırası")
     diagram: Optional[dict[str, Any]] = Field(
         default=None, description="Bu bölüme eklenmiş diyagram nesnesi"
+    )
+    figures: list[ExtractedFigure] = Field(
+        default_factory=list, description="Bu bölüme bağlamsal olarak yerleştirilen görseller/şemalar"
+    )
+    key_finding: Optional[str] = Field(
+        default=None, description="1-2 cümlelik, o bölüme özgü çarpıcı/özgün bulgu veya çıkarım"
     )
     sources: list[SourceReference] = Field(
         default_factory=list, description="İçeriğin çekildiği kaynak referansları"
@@ -53,7 +64,8 @@ class FilledSection(BaseModel):
 
     @property
     def section_id(self) -> str:
-        return self.group_id
+        return self.outline_id or self.group_id
+
 
 
 

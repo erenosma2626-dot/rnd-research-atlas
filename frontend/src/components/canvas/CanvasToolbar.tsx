@@ -7,6 +7,7 @@ import {
   Hand,
   Layers,
   Minus,
+  MousePointer,
   PenTool as PenIcon,
   Plus,
   Square,
@@ -62,12 +63,14 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   const [secType, setSecType] = useState('prose');
   const [secContent, setSecContent] = useState('');
 
-  // Keyboard shortcut: Esc or V to return to 'select' mode
+  // Keyboard shortcuts: V (select), H or Esc (pan), P (pen), E (eraser), T (text)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
-      if (e.key === 'Escape' || e.key.toLowerCase() === 'v') {
+      if (e.key.toLowerCase() === 'v') {
         setToolMode('select');
+      } else if (e.key === 'Escape' || e.key.toLowerCase() === 'h') {
+        setToolMode('pan');
       } else if (e.key.toLowerCase() === 'p') {
         setToolMode('pen');
       } else if (e.key.toLowerCase() === 'e') {
@@ -140,7 +143,21 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
         {/* Sağ Alan: Açık Tool Mode Seçici & Eylemler */}
         <div className="flex items-center gap-1 bg-white/85 dark:bg-[#0A0A0A]/85 backdrop-blur-md p-1.5 rounded-full border border-black/[0.06] dark:border-white/[0.08] shadow-sm pointer-events-auto">
-          {/* 1. El / Seçim Aracı (Varsayılan) */}
+          {/* 1. El / Kaydır Aracı (Varsayılan) */}
+          <button
+            onClick={() => setToolMode('pan')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              toolMode === 'pan'
+                ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+            }`}
+            title="Kaydırma ve Gezinme Modu (Kısayol: H veya Space basılı tut)"
+          >
+            <Hand className="w-3.5 h-3.5" />
+            <span>Kaydır</span>
+          </button>
+
+          {/* 2. Ok / Seçim Aracı */}
           <button
             onClick={() => setToolMode('select')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
@@ -148,13 +165,13 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                 ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
                 : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
             }`}
-            title="Seçim ve Gezinme Modu (Kısayol: V veya Esc)"
+            title="Kutu ve Alan Seçim Modu (Kısayol: V)"
           >
-            <Hand className="w-3.5 h-3.5" />
-            <span>Seçim</span>
+            <MousePointer className="w-3.5 h-3.5" />
+            <span>Seç</span>
           </button>
 
-          {/* 2. Kalem Aracı */}
+          {/* 3. Kalem Aracı */}
           <button
             onClick={() => setToolMode(toolMode === 'pen' ? 'select' : 'pen')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${

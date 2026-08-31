@@ -11,10 +11,11 @@ export interface ChartDataProps {
   series: ChartSeries[];
   y_axis_label?: string;
   title?: string;
+  caption?: string | null;
 }
 
 export const ChartSection: React.FC<{ data: ChartDataProps }> = ({ data }) => {
-  const { chart_type, x_labels, series, y_axis_label, title } = data;
+  const { chart_type, x_labels, series, y_axis_label, title, caption } = data;
 
   if (!series || series.length === 0 || !x_labels || x_labels.length === 0) {
     return (
@@ -130,6 +131,12 @@ export const ChartSection: React.FC<{ data: ChartDataProps }> = ({ data }) => {
           </div>
         ))}
       </div>
+
+      {caption && (
+        <p className="text-xs text-black/50 dark:text-white/50 text-center italic pt-1">
+          {caption}
+        </p>
+      )}
     </div>
   );
 };

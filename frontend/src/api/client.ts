@@ -41,19 +41,42 @@ export interface SourceReference {
   section_title: string;
 }
 
+export interface ExtractedFigureItem {
+  figure_id: string;
+  page?: number;
+  caption?: string | null;
+  image_url: string;
+  image_storage_path?: string;
+}
+
+export interface SectionNote {
+  id: string;
+  section_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+}
+
 export interface GeneratedDiagram {
   mermaid_code: string;
   group_id?: string;
+  section_id?: string;
+  caption?: string | null;
 }
 
 export interface FilledSection {
+  id?: string;
   group_id: string;
+  outline_id?: string;
   title: string;
   content_type: 'prose' | 'table' | 'list' | 'module_list' | 'image_gallery' | 'chart' | 'error';
   content: Record<string, any>;
+  order?: number;
   sources: SourceReference[];
   diagram_requested: boolean;
   diagram?: GeneratedDiagram | null;
+  figures?: ExtractedFigureItem[];
+  key_finding?: string | null;
 }
 
 export interface PaperProfile {
@@ -696,6 +719,7 @@ export async function deleteReportSection(sectionId: string): Promise<void> {
 // 27. Ön-Üretim Plan Şemaları & API'leri
 export interface FigureCandidate {
   figure_id: string;
+  page?: number;
   caption?: string | null;
   image_url: string;
   included: boolean;
@@ -743,5 +767,27 @@ export async function approveDocumentPlan(documentId: string, planState?: PlanSt
   }
   return res.json();
 }
+
+export async function createSectionNote(sectionId: string, content: string): Promise<SectionNote> {
+  const res = await authFetch(`${API_BASE_URL}/sections/${sectionId}/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Not eklenemedi.' }));
+    throw new Error(err.detail || 'Not eklenemedi.');
+  }
+  return res.json();
+}
+
+export async function getSectionNotes(sectionId: string): Promise<SectionNote[]> {
+  const res = await authFetch(`${API_BASE_URL}/sections/${sectionId}/notes`);
+  if (!res.ok) {
+    return [];
+  }
+  return res.json();
+}
+
 
 

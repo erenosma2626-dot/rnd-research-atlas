@@ -1,5 +1,6 @@
 from typing import Any, Optional
 from uuid import UUID
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +9,7 @@ from app.auth.dependencies import get_current_user
 from app.auth.permissions import require_role
 from app.db.base import get_async_db
 from app.db.models import User
-from app.db.repository import ProjectMemberRepository, ReportRepository, SectionRepository
+from app.db.repository import NoteRepository, ProjectMemberRepository, ReportRepository, SectionRepository
 
 router = APIRouter(tags=["Sections"])
 
@@ -34,6 +35,18 @@ class SectionResponse(BaseModel):
     content: dict[str, Any]
     order: int
     diagram: Optional[dict[str, Any]] = None
+
+
+class CreateSectionNoteRequest(BaseModel):
+    content: str = Field(..., min_length=1, description="Not metni")
+
+
+class SectionNoteResponse(BaseModel):
+    id: UUID
+    section_id: UUID
+    author_id: UUID
+    content: str
+    created_at: datetime
 
 
 @router.post(
@@ -127,3 +140,60 @@ async def delete_section(
     if not deleted:
         raise HTTPException(status_code=400, detail="Bölüm silinemedi.")
     return None
+
+
+@router.post(
+    "/sections/{section_id}/notes",
+    response_model=SectionNoteResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Bölüme kenar notu ekler",
+)
+async def create_section_note(
+    section_id: UUID,
+    payload: CreateSectionNoteRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    sec_repo = SectionRepository(db)
+    sec = await sec_repo.get_by_id(section_id)
+    if not sec:
+        raise HTTPException(status_code=404, detail="Bölüm bulunamadı.")
+
+    note_repo = NoteRepository(db)
+    note = await note_repo.create_section_note(
+        section_id=section_id,
+        author_id=current_user.id,
+        content=payload.content,
+    )
+    return SectionNoteResponse(
+        id=note.id,
+        section_id=note.section_id,
+        author_id=note.author_id,
+        content=note.content,
+        created_at=note.created_at,
+    )
+
+
+@router.get(
+    "/sections/{section_id}/notes",
+    response_model=list[SectionNoteResponse],
+    summary="Bölüme ait kenar notlarını listeler",
+)
+async def list_section_notes(
+    section_id: UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    note_repo = NoteRepository(db)
+    notes = await note_repo.list_by_section(section_id)
+    return [
+        SectionNoteResponse(
+            id=n.id,
+            section_id=n.section_id,
+            author_id=n.author_id,
+            content=n.content,
+            created_at=n.created_at,
+        )
+        for n in notes
+    ]
+

@@ -11,6 +11,7 @@ from app.db.models import (
     Canvas,
     CanvasItem,
     Document,
+    Note,
     Project,
     ProjectDocument,
     ProjectInvite,
@@ -732,3 +733,41 @@ class ProjectInviteRepository:
         res = await self.session.execute(stmt)
         await self.session.flush()
         return res.rowcount > 0
+
+
+class NoteRepository:
+    """Bölümlere ve tuvale eklenen kullanıcı notları için veri erişim katmanı."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create_section_note(self, section_id: UUID, author_id: UUID, content: str) -> Note:
+        """Belirtilen bölüme yeni bir not ekler."""
+        note = Note(
+            id=uuid4(),
+            section_id=section_id,
+            author_id=author_id,
+            content=content,
+        )
+        self.session.add(note)
+        await self.session.flush()
+        return note
+
+    async def list_by_section(self, section_id: UUID) -> list[Note]:
+        """Bir bölüme ait tüm notları listeler."""
+        stmt = (
+            select(Note)
+            .where(Note.section_id == section_id)
+            .order_by(Note.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def delete(self, note_id: UUID) -> bool:
+        """Notu siler."""
+        from sqlalchemy import delete
+        stmt = delete(Note).where(Note.id == note_id)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0
+

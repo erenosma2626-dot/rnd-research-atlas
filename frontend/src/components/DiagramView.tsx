@@ -5,9 +5,10 @@ import { useTheme } from '../theme/ThemeContext';
 interface DiagramViewProps {
   mermaidCode: string;
   title?: string;
+  caption?: string | null;
 }
 
-export const DiagramView: React.FC<DiagramViewProps> = ({ mermaidCode, title }) => {
+export const DiagramView: React.FC<DiagramViewProps> = ({ mermaidCode, title, caption }) => {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>('');
@@ -59,11 +60,18 @@ export const DiagramView: React.FC<DiagramViewProps> = ({ mermaidCode, title }) 
           {error}
         </div>
       ) : (
-        <div
-          ref={containerRef}
-          className="overflow-x-auto flex justify-center py-2 [&>svg]:max-w-full [&>svg]:h-auto"
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-        />
+        <>
+          <div
+            ref={containerRef}
+            className="overflow-x-auto flex justify-center py-2 [&>svg]:max-w-full [&>svg]:h-auto"
+            dangerouslySetInnerHTML={{ __html: svgContent }}
+          />
+          {caption && (
+            <p className="text-xs text-black/50 dark:text-white/50 text-center italic mt-2">
+              {caption}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
