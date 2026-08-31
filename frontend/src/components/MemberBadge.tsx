@@ -1,4 +1,5 @@
 import React from 'react';
+import { User } from 'lucide-react';
 import { ProjectMemberInfo } from '../api/client';
 
 interface MemberBadgeProps {
@@ -14,11 +15,6 @@ export const MemberBadge: React.FC<MemberBadgeProps> = ({
   onRemove,
   canRemove = false,
 }) => {
-  const getInitials = (name: string, email: string) => {
-    const text = name || email;
-    return text.substring(0, 2).toUpperCase();
-  };
-
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'owner':
@@ -45,8 +41,8 @@ export const MemberBadge: React.FC<MemberBadgeProps> = ({
   return (
     <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono text-xs font-bold flex items-center justify-center flex-shrink-0">
-          {getInitials(member.display_name, member.email)}
+        <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-black/60 dark:text-white/60 flex items-center justify-center flex-shrink-0">
+          <User className="w-4 h-4" />
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">

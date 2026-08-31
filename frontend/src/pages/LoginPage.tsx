@@ -85,15 +85,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
       <div className="w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 flex flex-col justify-between p-6 sm:p-8 bg-white dark:bg-[#0A0A0A] border-r border-black/[0.06] dark:border-white/[0.08] z-20 shadow-sm relative">
         {/* Top Header: Logo & Theme Switch */}
         <div className="flex items-center justify-between mb-8">
-          <div
+          <span
             onClick={onNavigateHome}
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="font-serif text-base font-semibold tracking-tight text-[#0A0A0A] dark:text-white cursor-pointer select-none"
           >
-            <div className="w-7 h-7 rounded-full bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] font-mono flex items-center justify-center font-bold text-xs shadow-xs group-hover:scale-105 transition-transform">
-              A
-            </div>
-            <span className="text-xs font-semibold tracking-tight">rnd-paper-canvas</span>
-          </div>
+            PaperCanvas
+          </span>
 
           <button
             onClick={toggleTheme}

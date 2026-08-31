@@ -76,17 +76,17 @@ export const SectionPickerMenu: React.FC<SectionPickerMenuProps> = ({
   const getIcon = (contentType: string) => {
     switch (contentType) {
       case 'table':
-        return <TableIcon className="w-3 h-3 text-indigo-500" />;
+        return <TableIcon className="w-3 h-3 text-black/70 dark:text-white/70" />;
       case 'list':
-        return <ListIcon className="w-3 h-3 text-emerald-500" />;
+        return <ListIcon className="w-3 h-3 text-black/70 dark:text-white/70" />;
       case 'module_list':
-        return <Cpu className="w-3 h-3 text-purple-500" />;
+        return <Cpu className="w-3 h-3 text-black/70 dark:text-white/70" />;
       case 'image_gallery':
-        return <ImageIcon className="w-3 h-3 text-amber-500" />;
+        return <ImageIcon className="w-3 h-3 text-black/70 dark:text-white/70" />;
       case 'chart':
-        return <BarChart3 className="w-3 h-3 text-rose-500" />;
+        return <BarChart3 className="w-3 h-3 text-black/70 dark:text-white/70" />;
       default:
-        return <FileText className="w-3 h-3 text-blue-500" />;
+        return <FileText className="w-3 h-3 text-black/70 dark:text-white/70" />;
     }
   };
 

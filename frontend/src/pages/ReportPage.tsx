@@ -14,7 +14,6 @@ import { SectionCard } from '../components/SectionCard';
 import { VerticalStepIndicator } from '../components/VerticalStepIndicator';
 import { usePollDocumentStatus } from '../hooks/usePollDocumentStatus';
 import { useTheme } from '../theme/ThemeContext';
-import { ControlPanelDrawer } from './ControlPanelDrawer';
 
 const STAGE_ORDER = [
   'parsing',
@@ -46,7 +45,6 @@ export const ReportPage: React.FC<ReportPageProps> = ({
   const [sections, setSections] = useState<FilledSection[]>([]);
   const [loadingReport, setLoadingReport] = useState<boolean>(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
   const [allCollapsed, setAllCollapsed] = useState<boolean | null>(null);
 
@@ -330,22 +328,6 @@ export const ReportPage: React.FC<ReportPageProps> = ({
                 </svg>
               )}
             </button>
-
-            {/* Control Panel Drawer Toggle */}
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] dark:hover:bg-white/[0.15] text-[#0A0A0A] dark:text-white text-xs font-medium rounded-full active:scale-98 transition-all"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                />
-              </svg>
-              Bölümleri Yönet
-            </button>
           </div>
         </div>
       </header>
@@ -375,23 +357,10 @@ export const ReportPage: React.FC<ReportPageProps> = ({
           <div className="text-xs font-mono text-black/50 dark:text-white/50">
             Toplam {sections.length} Bölüm
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownloadReportPdf}
-              disabled={isExportingPdf}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-black/[0.08] dark:border-white/[0.1] text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-              title="Raporu PDF olarak indir"
-            >
-              {isExportingPdf ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-              ) : (
-                <FileDown className="w-3.5 h-3.5 text-indigo-500" />
-              )}
-              <span>{isExportingPdf ? 'İndiriliyor...' : 'Raporu PDF İndir'}</span>
-            </button>
+          <div>
             <button
               onClick={() => setAllCollapsed((prev: boolean | null) => (prev === true ? false : true))}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+              className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-black/[0.08] dark:border-white/[0.1] text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
             >
               {allCollapsed ? 'Tümünü Genişlet' : 'Tümünü Daralt'}
             </button>
@@ -410,35 +379,6 @@ export const ReportPage: React.FC<ReportPageProps> = ({
           ))}
         </div>
       </main>
-
-      {/* Slide-Over Control Panel Drawer */}
-      <ControlPanelDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        documentId={documentId}
-        originalSections={sections}
-        controlPanelState={{
-          candidates: sections.map((s: FilledSection, idx: number) => {
-            const previewText = typeof s.content === 'object' && s.content !== null
-              ? (s.content.text || JSON.stringify(s.content))
-              : String(s.content || '');
-            return {
-              section_id: s.group_id,
-              group_id: s.group_id,
-              title: s.title,
-              content_preview: previewText.slice(0, 80),
-              included: true,
-              order: idx + 1,
-              diagram_eligible: true,
-              diagram_included: s.diagram_requested || false,
-            };
-          }),
-        }}
-        onFinalizeSuccess={(res) => {
-          setSections(res.sections);
-          setIsDrawerOpen(false);
-        }}
-      />
 
       {/* Floating Single-Paper Chatbot */}
       <ChatWidget documentId={documentId} />

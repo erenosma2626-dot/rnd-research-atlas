@@ -85,17 +85,17 @@ export const SectionBoxNode: React.FC<NodeProps<SectionBoxNodeData>> = memo(({ i
   const getIcon = () => {
     switch (content_type) {
       case 'table':
-        return <TableIcon className="w-3.5 h-3.5 text-indigo-500" />;
+        return <TableIcon className="w-3.5 h-3.5 text-black/70 dark:text-white/70" />;
       case 'list':
-        return <ListIcon className="w-3.5 h-3.5 text-emerald-500" />;
+        return <ListIcon className="w-3.5 h-3.5 text-black/70 dark:text-white/70" />;
       case 'module_list':
-        return <Cpu className="w-3.5 h-3.5 text-purple-500" />;
+        return <Cpu className="w-3.5 h-3.5 text-black/70 dark:text-white/70" />;
       case 'image_gallery':
-        return <ImageIcon className="w-3.5 h-3.5 text-amber-500" />;
+        return <ImageIcon className="w-3.5 h-3.5 text-black/70 dark:text-white/70" />;
       case 'chart':
-        return <BarChart3 className="w-3.5 h-3.5 text-rose-500" />;
+        return <BarChart3 className="w-3.5 h-3.5 text-black/70 dark:text-white/70" />;
       default:
-        return <FileText className="w-3.5 h-3.5 text-blue-500" />;
+        return <FileText className="w-3.5 h-3.5 text-black/70 dark:text-white/70" />;
     }
   };
 
@@ -210,7 +210,12 @@ export const SectionBoxNode: React.FC<NodeProps<SectionBoxNodeData>> = memo(({ i
 
       {/* Body Content */}
       <div className="p-3.5 flex-1 overflow-y-auto text-xs text-black/80 dark:text-white/80 font-sans space-y-2.5">
-        {!isExpanded ? (
+        {!content || (typeof content === 'object' && Object.keys(content).length === 0 && !content?.text) ? (
+          <div className="py-2 text-[11px] text-black/50 dark:text-white/50 italic flex items-center gap-1.5">
+            <span>⚠️</span>
+            <span>Bu bölümün içeriği bulunamadı veya kaynaktan kaldırılmış.</span>
+          </div>
+        ) : !isExpanded ? (
           /* Collapsed Mode (Compact Preview) */
           <div>
             {content_type === 'prose' && (
@@ -221,12 +226,16 @@ export const SectionBoxNode: React.FC<NodeProps<SectionBoxNodeData>> = memo(({ i
 
             {content_type === 'list' && (
               <ul className="space-y-1 text-black/70 dark:text-white/70">
-                {content?.items?.slice(0, 2).map((item: string, i: number) => (
-                  <li key={i} className="flex items-start gap-1.5 line-clamp-1">
-                    <span className="w-1 h-1 rounded-full bg-[#0A0A0A] dark:bg-white mt-1.5 shrink-0" />
-                    <span className="truncate">{item}</span>
-                  </li>
-                ))}
+                {content?.items && content.items.length > 0 ? (
+                  content.items.slice(0, 2).map((item: string, i: number) => (
+                    <li key={i} className="flex items-start gap-1.5 line-clamp-1">
+                      <span className="w-1 h-1 rounded-full bg-[#0A0A0A] dark:bg-white mt-1.5 shrink-0" />
+                      <span className="truncate">{item}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-[11px] text-black/40 dark:text-white/40 italic">Liste boş</li>
+                )}
               </ul>
             )}
 
@@ -266,9 +275,13 @@ export const SectionBoxNode: React.FC<NodeProps<SectionBoxNodeData>> = memo(({ i
             {/* Prose Content with Markdown & LaTeX */}
             {content_type === 'prose' && (
               <div className="prose dark:prose-invert prose-xs max-w-none leading-relaxed text-[#0A0A0A]/90 dark:text-white/90">
-                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                  {content?.text || ''}
-                </ReactMarkdown>
+                {content?.text ? (
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {content.text}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="text-[11px] text-black/40 dark:text-white/40 italic">Metin içeriği bulunmuyor.</p>
+                )}
               </div>
             )}
 

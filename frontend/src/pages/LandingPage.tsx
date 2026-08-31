@@ -1,5 +1,14 @@
 import React from 'react';
-import { ArrowRight, BookOpen, Network, Sparkles, Zap, Layers } from 'lucide-react';
+import {
+  ArrowRight,
+  LayoutGrid,
+  ListChecks,
+  ScanSearch,
+  Sparkles,
+  Upload,
+} from 'lucide-react';
+import { BlockMath, InlineMath } from 'react-katex';
+import 'katex/dist/katex.min.css';
 import { Domain3DCanvas, DomainType } from '../components/3d/Domain3DCanvas';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -19,8 +28,12 @@ const DOMAINS: Array<{
     title: 'Matematik ve Kuramsal Temeller',
     badge: 'Teori & İspat',
     description:
-      'Karmaşık teorem, lemma ve ispat hiyerarşisini otomatik ayrıştırır. Sembolik notasyonları ve denklemleri LaTeX formatında eksiksiz yakalar.',
-    highlights: ['Otomatik LaTeX Formül Çıkarma', 'Teorem & İspat Blok Tespiti', 'Notasyonel Tutarlılık'],
+      'Teorem, lemma ve ispat hiyerarşisini otomatik ayrıştırır. Matematiksel notasyonu ve denklemleri LaTeX formatında eksiksiz yakalar.',
+    highlights: [
+      'Otomatik LaTeX Formül Çıkarma',
+      'Teorem & İspat Blok Tespiti',
+      'Notasyonel Tutarlılık',
+    ],
   },
   {
     id: 'ml',
@@ -28,23 +41,35 @@ const DOMAINS: Array<{
     badge: 'Model & Mimari',
     description:
       'Yapay sinir ağı mimarilerini, hiperparametre tablolarını ve ablasyon çalışmalarını karşılaştırmalı özet tablolarına dönüştürür.',
-    highlights: ['Ablasyon Çalışmaları', 'Model Mimarisi Ayrıştırma', 'Metrik Karşılaştırma Tabloları'],
+    highlights: [
+      'Ablasyon Çalışmaları',
+      'Model Mimarisi Ayrıştırma',
+      'Metrik Karşılaştırma Tabloları',
+    ],
   },
   {
     id: 'ai',
-    title: 'Yapay Zeka & Büyük Dil Modelleri',
-    badge: 'RAG & Ajanlar',
+    title: 'Yapay Zeka Sistemleri',
+    badge: 'Sistem & Mimari',
     description:
-      'Makaleyi vektör uzayına indeksler. Entegre RAG sohbet asistanı sayesinde doğrudan sayfa referanslarıyla soru-cevap imkanı sunar.',
-    highlights: ['Doğrulanmış Sayfa Referansları', 'Gelişmiş Vektör Arama', 'Etkileşimli Araştırma Asistanı'],
+      'Sistem mimarilerini, veri akış şemalarını ve deneysel sonuçları modüler bir yapıya böler; her bileşeni ayrı ayrı takip edilebilir kılar.',
+    highlights: [
+      'Sistem Mimarisi Modülerleştirme',
+      'Deneysel Sonuç Grafikleri',
+      'Karar Ağacı / Akış Tespiti',
+    ],
   },
   {
     id: 'data',
-    title: 'Veri Bilimi ve Deneysel İstatistik',
+    title: 'Veri Bilimi & İstatistik',
     badge: 'Veri & Deney',
     description:
-      'Veri seti dağılımlarını, ön işleme adımlarını ve kıyaslama (benchmark) sonuçlarını yapılandırılmış veri bloklarına aktarır.',
-    highlights: ['Veri Seti Şemaları', 'Benchmark Analizleri', 'İstatistiksel Dağılım Çıkarımı'],
+      'Veri setlerini, ön işleme adımlarını ve istatistiksel değerlendirme metriklerini gerçek grafik ve tablolara dönüştürür.',
+    highlights: [
+      'Veri Seti & Ön İşleme Özeti',
+      'İstatistiksel Değerlendirme Tabloları',
+      'Sayısal Sonuç Grafikleri',
+    ],
   },
 ];
 
@@ -66,12 +91,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
       {/* Sticky Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-[#0A0A0A]/80 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] flex items-center justify-center font-bold text-xs shadow-xs">
-              A
-            </div>
-            <span className="text-sm font-semibold tracking-tight">rnd-paper-canvas</span>
-          </div>
+          <span className="font-serif text-lg font-semibold tracking-tight text-[#0A0A0A] dark:text-white">
+            PaperCanvas
+          </span>
 
           <div className="flex items-center gap-3">
             <button
@@ -101,70 +123,112 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
       </header>
 
       {/* 1. HERO SECTION */}
-      <section className="max-w-4xl mx-auto px-6 pt-24 pb-20 text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] text-xs text-black/70 dark:text-white/70 mb-8 font-medium">
+      <section className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center relative z-10">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] text-xs text-black/70 dark:text-white/70 mb-8 font-medium">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Akademik Araştırma ve Sentez Atlası</span>
         </div>
 
         <h1 className="font-serif text-5xl sm:text-7xl font-medium tracking-tight text-[#0A0A0A] dark:text-white leading-[1.05] mb-6 max-w-3xl mx-auto">
-          Makaleleri oku, biz yapılandıralım.
+          Okumadan önce, anlamak için.
         </h1>
 
         <p className="text-base sm:text-lg text-black/60 dark:text-white/60 max-w-xl mx-auto mb-10 leading-relaxed font-sans">
-          Karmaşık akademik PDF’leri Docling ile ayrıştırın, formülleri otomatik LaTeX'e dönüştürün ve sonsuz tuvalde ekipçe sentezleyin.
+          Akademik makaleleri otomatik analiz eden, ortak yapıları yakalayan ve canvas üzerinde organize etmeni sağlayan bir ArGe aracı.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
             onClick={onNavigateLogin}
-            className="flex items-center gap-2.5 px-7 py-3.5 rounded-full text-sm font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+            className="flex items-center gap-2.5 px-8 py-3.5 rounded-full text-sm font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
           >
-            <span>Çalışma Alanına Başla</span>
+            <span>Başla</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </section>
 
-      {/* 2. SECTION A: Ne Yapıyoruz (Problem & Çözüm) */}
-      <section className="max-w-5xl mx-auto px-6 py-20 border-t border-black/[0.05] dark:border-white/[0.08]">
-        <div className="text-center mb-14">
+      {/* 5.A: SOMUT ÇIKTI ÖNİZLEMESİ (Hero Altı Mockup) */}
+      <section className="max-w-4xl mx-auto px-6 pb-20">
+        <div className="rounded-3xl border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#141414] shadow-[0_12px_40px_rgba(0,0,0,0.06)] overflow-hidden">
+          {/* Mockup Window Header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.05] dark:border-white/[0.07] bg-black/[0.02] dark:bg-white/[0.02]">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-400/80" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+              <span className="ml-2 text-[11px] font-mono text-black/40 dark:text-white/40">
+                paper_analysis_report.pdf &rarr; Yapılandırılmış Çıktı
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium">
+              Analiz Tamamlandı
+            </span>
+          </div>
+
+          {/* Mockup Window Body */}
+          <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-2">
+              <div className="text-[10px] font-mono text-black/40 dark:text-white/40">BÖLÜM 01 · YÖNTEM</div>
+              <h4 className="font-serif text-sm font-semibold text-[#0A0A0A] dark:text-white">Çok Katmanlı Dikkat Mekanizması</h4>
+              <p className="text-[11px] text-black/60 dark:text-white/60 leading-relaxed">
+                Girdi dizileri <InlineMath math="Q, K, V" /> matrisleri üzerinden lineer projeksiyonla alt uzaylara ayrıştırılır.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-2">
+              <div className="text-[10px] font-mono text-black/40 dark:text-white/40">BÖLÜM 02 · FORMÜL & LATEX</div>
+              <h4 className="font-serif text-sm font-semibold text-[#0A0A0A] dark:text-white">Ölçekli Çarpım Fonksiyonu</h4>
+              <div className="text-[11px] p-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.05] text-black/90 dark:text-white/90 overflow-x-auto select-all flex items-center justify-center">
+                <BlockMath math="\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V" />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-2">
+              <div className="text-[10px] font-mono text-black/40 dark:text-white/40">BÖLÜM 03 · BULGULAR & TABLO</div>
+              <h4 className="font-serif text-sm font-semibold text-[#0A0A0A] dark:text-white">Benchmark Başarımı</h4>
+              <div className="text-[11px] font-mono space-y-1">
+                <div className="flex justify-between py-0.5 border-b border-black/[0.05] dark:border-white/[0.06] text-black/50 dark:text-white/50">
+                  <span>Model</span>
+                  <span>BLEU</span>
+                </div>
+                <div className="flex justify-between py-0.5 text-black/80 dark:text-white/80 font-medium">
+                  <span>Önerilen Model</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">41.8</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. SECTION A: Neden Bu Araç Var */}
+      <section className="max-w-4xl mx-auto px-6 py-20 border-t border-black/[0.05] dark:border-white/[0.08]">
+        <div className="text-center mb-12">
           <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-[#0A0A0A] dark:text-white">
-            Akademik Okumayı Zahmetsiz Kılın
+            Neden bu araç var
           </h2>
-          <p className="text-sm text-black/55 dark:text-white/55 mt-2 max-w-lg mx-auto">
-            Dağınık sayfalar, gözden kaçan detaylar ve karmaşık denklemler arasında kaybolmayın.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-8 rounded-3xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 shadow-xs hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200">
-            <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center mb-5 font-mono text-sm font-bold">
-              01
-            </div>
-            <h3 className="font-serif text-xl font-medium mb-2 tracking-tight">Yapılandırılmış Rapor</h3>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              Her makalenin türüne göre dinamik slotlar oluşturulur. Teorem, model mimarisi veya veri seti bilgileri otomatik sınıflandırılır.
+        <div className="space-y-4 max-w-2xl mx-auto">
+          <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08]">
+            <span className="w-2 h-2 rounded-full bg-[#0A0A0A] dark:bg-white mt-2 shrink-0" />
+            <p className="text-sm text-black/75 dark:text-white/75 leading-relaxed font-sans">
+              Aynı formatta düzinelerce makale okumak zaman alıyor; her seferinde yöntemi, veri setini, sonuçları elle bulup çıkarmak gerekiyor.
             </p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 shadow-xs hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200">
-            <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center mb-5 font-mono text-sm font-bold">
-              02
-            </div>
-            <h3 className="font-serif text-xl font-medium mb-2 tracking-tight">Hassas LaTeX Çıkarımı</h3>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              Metin içi ve blok formüller Nougat ve görme modelleriyle anında LaTeX'e çevrilir, KaTeX ile net şekilde çizilir.
+          <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08]">
+            <span className="w-2 h-2 rounded-full bg-[#0A0A0A] dark:bg-white mt-2 shrink-0" />
+            <p className="text-sm text-black/75 dark:text-white/75 leading-relaxed font-sans">
+              Bu araç makaleyi okuyup kendi anlatı akışına göre bölüyor, ortak desenleri (yöntem, deney, teorem, karşılaştırma) otomatik yakalıyor.
             </p>
           </div>
 
-          <div className="p-8 rounded-3xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 shadow-xs hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-200">
-            <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center mb-5 font-mono text-sm font-bold">
-              03
-            </div>
-            <h3 className="font-serif text-xl font-medium mb-2 tracking-tight">Sonsuz Canvas Tuvali</h3>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              Birden fazla makaleyi ve notu React Flow tabanlı tuvale sürükleyin, aralarında bağlantılar ve karşılaştırmalar kurun.
+          <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08]">
+            <span className="w-2 h-2 rounded-full bg-[#0A0A0A] dark:bg-white mt-2 shrink-0" />
+            <p className="text-sm text-black/75 dark:text-white/75 leading-relaxed font-sans">
+              Sonuç: makalenin kendi görselleriyle, tablolarıyla ve öne çıkan bulgularıyla birlikte, düzenli ve taranabilir bir rapor.
             </p>
           </div>
         </div>
@@ -174,71 +238,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
       <section className="max-w-5xl mx-auto px-6 py-20 border-t border-black/[0.05] dark:border-white/[0.08]">
         <div className="text-center mb-14">
           <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-[#0A0A0A] dark:text-white">
-            Nasıl Çalışır?
+            Nasıl çalışıyor
           </h2>
-          <p className="text-sm text-black/55 dark:text-white/55 mt-2">
-            Yüklemeden görsel senteze 4 adımlı akıllı akış
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08]">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <BookOpen className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
+              <Upload className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
             </div>
             <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 01</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">PDF Yükleyin</h4>
-            <p className="text-xs text-black/55 dark:text-white/55">
-              İncelemek istediğiniz araştırma makalesini sürükleyip bırakın.
+            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Makaleni yükle</h4>
+            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
+              PDF'i sürükle-bırak, gerisini biz hallederiz.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08]">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <Zap className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
+              <ScanSearch className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
             </div>
             <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 02</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Asenkron Analiz</h4>
-            <p className="text-xs text-black/55 dark:text-white/55">
-              5 aşamalı pipeline makaleyi ayrıştırır ve formülleri derler.
+            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Otomatik analiz</h4>
+            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
+              Yöntem, bulgular, görseller ve tablolar tespit edilir.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08]">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <Layers className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
+              <ListChecks className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
             </div>
             <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 03</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Rapor & Soru-Cevap</h4>
-            <p className="text-xs text-black/55 dark:text-white/55">
-              Yapılandırılmış raporu inceleyin, RAG asistanına sorular sorun.
+            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Planla ve onayla</h4>
+            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
+              Rapora hangi bölümlerin gireceğine sen karar verirsin.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08]">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
             <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <Network className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
+              <LayoutGrid className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
             </div>
             <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 04</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Canvas ile Sentez</h4>
-            <p className="text-xs text-black/55 dark:text-white/55">
-              Çoklu makaleleri harita üzerinde birbirine bağlayarak büyük resmi görün.
+            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Canvas'ta organize et</h4>
+            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
+              Bölümleri sürükle, notlar ekle, bağlantı kur.
             </p>
           </div>
         </div>
       </section>
 
-      {/* 4. SECTION C: Disiplin Bazlı Scroll-Linked 3D Alan Tanıtımı */}
+      {/* 4. SECTION C: Disiplin Bazlı 3D Alan Tanıtımı */}
       <section className="max-w-5xl mx-auto px-6 py-20 border-t border-black/[0.05] dark:border-white/[0.08]">
-        <div className="text-center mb-16">
-          <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-[#0A0A0A] dark:text-white">
-            Tüm Araştırma Disiplinlerine Uyumlu
-          </h2>
-          <p className="text-sm text-black/55 dark:text-white/55 mt-2">
-            Farklı alanların kendine has makale yapılarına özel uyarlamalar
-          </p>
-        </div>
-
         <div className="space-y-16">
           {DOMAINS.map((domain, index) => (
             <div
@@ -280,25 +332,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
         </div>
       </section>
 
-      {/* Call to Action Bar */}
-      <section className="max-w-4xl mx-auto px-6 py-20 text-center border-t border-black/[0.05] dark:border-white/[0.08]">
-        <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight mb-4">
-          Araştırmanızı Bir Üst Seviyeye Taşıyın
+      {/* 5.B: Kapanış CTA'sı */}
+      <section className="max-w-4xl mx-auto px-6 py-24 text-center border-t border-black/[0.05] dark:border-white/[0.08]">
+        <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight mb-6">
+          Bir makalen mi var? Dene.
         </h2>
-        <p className="text-sm text-black/55 dark:text-white/55 mb-8 max-w-md mx-auto">
-          Ekibinizle birlikte makaleleri analiz etmek ve sonsuz tuvalde düzenlemek için ücretsiz başlayın.
-        </p>
         <button
           onClick={onNavigateLogin}
           className="px-8 py-3.5 rounded-full text-sm font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm"
         >
-          Hemen Başlayın &rarr;
+          Başla
         </button>
       </section>
 
-      {/* Minimalist Footer */}
-      <footer className="border-t border-black/[0.05] dark:border-white/[0.08] py-8 text-center text-xs text-black/40 dark:text-white/40 font-mono">
-        rnd-paper-canvas · Akademik Araştırma Atlası
+      {/* 7. Sade Footer */}
+      <footer className="border-t border-black/[0.05] dark:border-white/[0.08] py-8 text-center text-xs text-black/50 dark:text-white/50 font-mono">
+        © 2026 · PaperCanvas ·{' '}
+        <a
+          href="https://github.com/erenosma2626-dot/rnd-research-atlas"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline text-black/70 dark:text-white/70"
+        >
+          GitHub: github.com/erenosma2626-dot/rnd-research-atlas
+        </a>
       </footer>
     </div>
   );

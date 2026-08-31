@@ -50,7 +50,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       {/* Header */}
       <div className="p-5 border-b border-card-border-light dark:border-card-border-dark flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-accent flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
@@ -86,14 +86,14 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Makale adı ile filtrele..."
-            className="w-full pl-9 pr-3 py-1.5 rounded-xl text-xs bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark outline-none focus:border-accent"
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl text-xs bg-card-bg-light dark:bg-card-bg-dark border border-card-border-light dark:border-card-border-dark outline-none focus:border-black dark:focus:border-white"
           />
         </div>
       </div>
 
       {/* Hint */}
-      <div className="px-4 py-2 bg-blue-50/50 dark:bg-blue-950/20 text-[11px] text-text-secondary-light border-b border-card-border-light/40 dark:border-card-border-dark/40 flex items-center gap-1.5">
-        <svg className="w-3.5 h-3.5 text-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="px-4 py-2 bg-black/[0.02] dark:bg-white/[0.03] text-[11px] text-text-secondary-light border-b border-card-border-light/40 dark:border-card-border-dark/40 flex items-center gap-1.5 font-mono">
+        <svg className="w-3.5 h-3.5 text-black/50 dark:text-white/50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span>Kartları doğrudan canvas üzerine sürükleyip bırakabilirsiniz.</span>

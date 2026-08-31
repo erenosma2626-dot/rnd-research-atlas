@@ -123,6 +123,7 @@ export interface DocumentSummary {
   uploaded_at: string;
   processing_status: 'pending' | 'processing' | 'done' | 'failed';
   error_message?: string | null;
+  tags?: string[];
 }
 
 export interface DocumentStatusResponse {
@@ -255,7 +256,7 @@ export interface CanvasSummary {
 export interface CanvasItemData {
   id: string;
   canvas_id: string;
-  item_type: 'document_box' | 'note' | 'connection' | string;
+  item_type: 'document_box' | 'note' | 'connection' | 'section_box' | string;
   ref_id?: string | null;
   position_x: number;
   position_y: number;
@@ -264,6 +265,16 @@ export interface CanvasItemData {
   document_status?: string | null;
   added_by?: UserSummary | null;
   is_own?: boolean | null;
+  section_content?: {
+    id?: string;
+    title?: string;
+    content_type?: string;
+    content?: Record<string, any>;
+    figures?: any[];
+    diagram?: any;
+    key_finding?: string | null;
+    order?: number;
+  } | null;
 }
 
 // 1. Asenkron Doküman Yükleme
@@ -785,6 +796,36 @@ export async function getSectionNotes(sectionId: string): Promise<SectionNote[]>
   const res = await authFetch(`${API_BASE_URL}/sections/${sectionId}/notes`);
   if (!res.ok) {
     return [];
+  }
+  return res.json();
+}
+
+export async function getDocumentTags(documentId: string): Promise<string[]> {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/tags`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addDocumentTag(documentId: string, name: string): Promise<string[]> {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Etiket eklenemedi.' }));
+    throw new Error(err.detail || 'Etiket eklenemedi.');
+  }
+  return res.json();
+}
+
+export async function removeDocumentTag(documentId: string, name: string): Promise<string[]> {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/tags/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Etiket silinemedi.' }));
+    throw new Error(err.detail || 'Etiket silinemedi.');
   }
   return res.json();
 }

@@ -74,7 +74,10 @@ export const UploadPage: React.FC<UploadPageProps> = ({
               </svg>
               Projeye Dön
             </button>
-            <span className="text-sm font-semibold tracking-tight">rnd-paper-canvas</span>
+            <div className="h-4 w-px bg-black/[0.08] dark:bg-white/[0.1]" />
+            <span className="font-serif text-base font-semibold tracking-tight text-[#0A0A0A] dark:text-white">
+              PaperCanvas
+            </span>
           </div>
 
           <button

@@ -11,7 +11,7 @@ from app.auth.dependencies import get_current_user
 from app.auth.permissions import require_role
 from app.db.base import get_async_db
 from app.db.models import ProjectDocument, ProjectMember, User
-from app.db.repository import CanvasItemRepository, CanvasRepository, DocumentRepository
+from app.db.repository import CanvasItemRepository, CanvasRepository, DocumentRepository, SectionRepository
 
 router = APIRouter(tags=["Canvas (Workspace)"])
 
@@ -61,6 +61,8 @@ class CanvasItemResponse(BaseModel):
     document_status: Optional[str] = None
     added_by: Optional[UserSummary] = None
     is_own: Optional[bool] = None
+    # Bölüm (section_box) içeriği
+    section_content: Optional[dict[str, Any]] = None
 
 
 @router.post(
@@ -163,6 +165,54 @@ async def delete_canvas(
     return {"status": "deleted", "canvas_id": str(canvas_id)}
 
 
+def _build_section_content(
+    it: Any,
+    sections_by_id: dict[UUID, Any],
+) -> Optional[dict[str, Any]]:
+    if it.item_type != "section_box":
+        return None
+
+    target_id: Optional[UUID] = None
+    if it.ref_id:
+        target_id = it.ref_id
+    elif isinstance(it.content, dict) and it.content.get("section_id"):
+        try:
+            target_id = UUID(str(it.content.get("section_id")))
+        except Exception:
+            pass
+
+    sec = sections_by_id.get(target_id) if target_id else None
+    if sec:
+        sec_raw_content = sec.content if isinstance(sec.content, dict) else {"text": str(sec.content)}
+        figures = sec_raw_content.get("figures", []) if isinstance(sec_raw_content, dict) else []
+        key_finding = sec_raw_content.get("key_finding") if isinstance(sec_raw_content, dict) else None
+        return {
+            "id": str(sec.id),
+            "title": sec.title,
+            "content_type": sec.section_type,
+            "content": sec_raw_content,
+            "figures": figures,
+            "diagram": sec.diagram,
+            "key_finding": key_finding,
+            "order": sec.order,
+        }
+
+    # Fallback to in-item content if available
+    if isinstance(it.content, dict) and (it.content.get("title") or it.content.get("content")):
+        return {
+            "id": str(it.ref_id) if it.ref_id else str(it.id),
+            "title": it.content.get("title", "Bölüm"),
+            "content_type": it.content.get("content_type", "prose"),
+            "content": it.content.get("content", {}),
+            "figures": it.content.get("figures", []),
+            "diagram": it.content.get("diagram"),
+            "key_finding": it.content.get("key_finding"),
+            "order": it.content.get("order", 1),
+        }
+
+    return None
+
+
 @router.get(
     "/canvases/{canvas_id}/items",
     response_model=list[CanvasItemResponse],
@@ -173,7 +223,7 @@ async def get_canvas_items(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[CanvasItemResponse]:
-    """Canvas elemanlarını ve doküman bilgilerini döner."""
+    """Canvas elemanlarını, doküman ve bölüm (section) içeriklerini döner."""
     canvas_repo = CanvasRepository(db)
     canvas = await canvas_repo.get_by_id(canvas_id)
     if not canvas:
@@ -184,8 +234,25 @@ async def get_canvas_items(
 
     item_repo = CanvasItemRepository(db)
     doc_repo = DocumentRepository(db)
+    section_repo = SectionRepository(db)
 
     items = await item_repo.list_by_canvas(canvas_id)
+
+    # Toplu section sorgusu (N+1 sorgu yerine tek WHERE id IN (...))
+    section_ids_to_fetch: list[UUID] = []
+    for it in items:
+        if it.item_type == "section_box":
+            if it.ref_id:
+                section_ids_to_fetch.append(it.ref_id)
+            elif isinstance(it.content, dict) and it.content.get("section_id"):
+                try:
+                    section_ids_to_fetch.append(UUID(str(it.content.get("section_id"))))
+                except Exception:
+                    pass
+
+    db_sections = await section_repo.get_many_by_ids(section_ids_to_fetch)
+    sections_by_id = {s.id: s for s in db_sections}
+
     results: list[CanvasItemResponse] = []
 
     for it in items:
@@ -223,6 +290,8 @@ async def get_canvas_items(
             except Exception:
                 pass
 
+        sec_content = _build_section_content(it, sections_by_id)
+
         results.append(
             CanvasItemResponse(
                 id=it.id,
@@ -236,6 +305,7 @@ async def get_canvas_items(
                 document_status=doc_status,
                 added_by=added_by_info,
                 is_own=is_own,
+                section_content=sec_content,
             )
         )
 
@@ -254,7 +324,7 @@ async def add_canvas_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> CanvasItemResponse:
-    """Canvas üzerine doküman kutucuğu, not veya bağlantı yerleştirir."""
+    """Canvas üzerine doküman kutucuğu, not, bölüm veya bağlantı yerleştirir."""
     canvas_repo = CanvasRepository(db)
     canvas = await canvas_repo.get_by_id(canvas_id)
     if not canvas:
@@ -265,6 +335,7 @@ async def add_canvas_item(
 
     item_repo = CanvasItemRepository(db)
     doc_repo = DocumentRepository(db)
+    section_repo = SectionRepository(db)
 
     item = await item_repo.create(
         canvas_id=canvas_id,
@@ -283,6 +354,18 @@ async def add_canvas_item(
             doc_title = doc.original_filename
             doc_status = doc.processing_status
 
+    sec_content = None
+    if item.item_type == "section_box":
+        target_sec_id = item.ref_id
+        if not target_sec_id and isinstance(item.content, dict) and item.content.get("section_id"):
+            try:
+                target_sec_id = UUID(str(item.content.get("section_id")))
+            except Exception:
+                pass
+        db_sec = await section_repo.get_by_id(target_sec_id) if target_sec_id else None
+        sections_map = {db_sec.id: db_sec} if db_sec else {}
+        sec_content = _build_section_content(item, sections_map)
+
     return CanvasItemResponse(
         id=item.id,
         canvas_id=item.canvas_id,
@@ -293,6 +376,7 @@ async def add_canvas_item(
         content=item.content,
         document_title=doc_title,
         document_status=doc_status,
+        section_content=sec_content,
     )
 
 
@@ -309,6 +393,7 @@ async def update_canvas_item_position(
 ) -> CanvasItemResponse:
     """Sürükleyip bırakma veya metin düzenleme sonrası günceller."""
     item_repo = CanvasItemRepository(db)
+    section_repo = SectionRepository(db)
     updated = await item_repo.update_item(
         item_id=item_id,
         position_x=request.position_x,
@@ -321,6 +406,18 @@ async def update_canvas_item_position(
             detail="Canvas elemanı bulunamadı.",
         )
 
+    sec_content = None
+    if updated.item_type == "section_box":
+        target_sec_id = updated.ref_id
+        if not target_sec_id and isinstance(updated.content, dict) and updated.content.get("section_id"):
+            try:
+                target_sec_id = UUID(str(updated.content.get("section_id")))
+            except Exception:
+                pass
+        db_sec = await section_repo.get_by_id(target_sec_id) if target_sec_id else None
+        sections_map = {db_sec.id: db_sec} if db_sec else {}
+        sec_content = _build_section_content(updated, sections_map)
+
     return CanvasItemResponse(
         id=updated.id,
         canvas_id=updated.canvas_id,
@@ -329,6 +426,7 @@ async def update_canvas_item_position(
         position_x=updated.position_x,
         position_y=updated.position_y,
         content=updated.content,
+        section_content=sec_content,
     )
 
 

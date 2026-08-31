@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Folder } from 'lucide-react';
 import { createProject, listUserProjects, ProjectSummary } from '../api/client';
 import { useAuth } from '../auth/useAuth';
 import { useTheme } from '../theme/ThemeContext';
@@ -62,16 +63,13 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
       {/* Top Sticky Glassmorphic Navbar */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-[#0A0A0A]/80 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] flex items-center justify-center font-bold text-sm shadow-xs">
-              A
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold tracking-tight">rnd-paper-canvas</h1>
-              <p className="text-[11px] text-black/50 dark:text-white/50">
-                Araştırma Çalışma Alanları
-              </p>
-            </div>
+          <div>
+            <h1 className="font-serif text-base font-semibold tracking-tight text-[#0A0A0A] dark:text-white leading-tight">
+              PaperCanvas
+            </h1>
+            <p className="text-[11px] text-black/50 dark:text-white/50">
+              Araştırma Çalışma Alanları
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -160,8 +158,8 @@ export const ProjectListPage: React.FC<ProjectListPageProps> = ({ onSelectProjec
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono flex items-center justify-center font-bold text-sm">
-                      {p.name.substring(0, 2).toUpperCase()}
+                    <div className="w-10 h-10 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center flex-shrink-0">
+                      <Folder className="w-4 h-4 text-black/70 dark:text-white/70" />
                     </div>
 
                     <span className="px-3 py-0.5 rounded-full text-[10px] font-semibold border bg-black/[0.03] dark:bg-white/[0.05] text-black/70 dark:text-white/70 border-black/[0.06] dark:border-white/[0.1]">

@@ -1,4 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Folder,
+  Plus,
+  Tag as TagIcon,
+  Users,
+} from 'lucide-react';
 import {
   DEFAULT_PROJECT_ID,
   deleteDocument,
@@ -37,6 +43,7 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingCanvas, setLoadingCanvas] = useState<boolean>(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const fetchDocuments = async () => {
     try {
@@ -62,6 +69,33 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
 
     return () => clearInterval(interval);
   }, [projectId]);
+
+  // Unique tags list from all documents
+  const allUniqueTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    documents.forEach((d) => {
+      d.tags?.forEach((t) => tagSet.add(t));
+    });
+    return Array.from(tagSet).sort();
+  }, [documents]);
+
+  const toggleTagFilter = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const clearTagFilters = () => {
+    setSelectedTags([]);
+  };
+
+  // Filtered documents
+  const filteredDocuments = useMemo(() => {
+    if (selectedTags.length === 0) return documents;
+    return documents.filter((d) =>
+      d.tags?.some((t) => selectedTags.includes(t))
+    );
+  }, [documents, selectedTags]);
 
   const handleOpenCanvasClick = async () => {
     setLoadingCanvas(true);
@@ -90,6 +124,12 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
     }
   };
 
+  const handleTagsUpdated = (docId: string, updatedTags: string[]) => {
+    setDocuments((prev) =>
+      prev.map((d) => (d.id === docId ? { ...d, tags: updatedTags } : d))
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white transition-colors duration-200 font-sans">
       {/* Top Sticky Glassmorphic Navbar */}
@@ -108,8 +148,9 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
               </button>
             )}
 
-            <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono flex items-center justify-center font-bold text-xs">
-              {projectName.substring(0, 1).toUpperCase()}
+            {/* Folder Icon yerine baş harf kalktı */}
+            <div className="w-8 h-8 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center flex-shrink-0">
+              <Folder className="w-4 h-4 text-black/70 dark:text-white/70" />
             </div>
             <div>
               <h1 className="text-sm font-semibold tracking-tight">{projectName}</h1>
@@ -127,10 +168,8 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
                 className="flex items-center gap-2 px-4 py-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all shadow-xs"
                 title="Üye Yönetimi ve Proje Ayarları"
               >
-                <svg className="w-3.5 h-3.5 text-black/60 dark:text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Üyeler
+                <Users className="w-3.5 h-3.5 text-black/60 dark:text-white/60" />
+                <span>Üyeler</span>
               </button>
             )}
 
@@ -197,10 +236,10 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
         </div>
       </header>
 
-      {/* Main Grid Content */}
+      {/* Main Workspace */}
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Actions Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
           <div>
             <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-[#0A0A0A] dark:text-white leading-[1.1]">
               Proje Dokümanları
@@ -215,49 +254,92 @@ export const ProjectPage: React.FC<ProjectPageProps> = ({
               onClick={onNavigateUpload}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-sm self-start sm:self-auto"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Yeni PDF Ekle
+              <Plus className="w-4 h-4" />
+              <span>Yeni PDF Ekle</span>
             </button>
           )}
         </div>
 
+        {/* Tag Filter Bar */}
+        {allUniqueTags.length > 0 && (
+          <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex items-center gap-1.5 text-xs text-black/50 dark:text-white/50 font-mono shrink-0 mr-1">
+              <TagIcon className="w-3.5 h-3.5" />
+              <span>Etiketler:</span>
+            </div>
+
+            {allUniqueTags.map((tag) => {
+              const isSelected = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTagFilter(tag)}
+                  className={`px-3 py-1 rounded-full text-xs font-mono transition-all select-none shrink-0 ${
+                    isSelected
+                      ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
+                      : 'bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-black/70 dark:text-white/70 hover:bg-black/[0.06] dark:hover:bg-white/[0.09]'
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+
+            {selectedTags.length > 0 && (
+              <button
+                type="button"
+                onClick={clearTagFilters}
+                className="text-xs text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white underline underline-offset-2 font-mono shrink-0 ml-1"
+              >
+                Tümünü Temizle ({selectedTags.length})
+              </button>
+            )}
+          </div>
+        )}
+
         {/* State Views */}
         {loading ? (
-          <div className="p-16 text-center text-xs text-black/40 dark:text-white/40 animate-pulse">
+          <div className="p-16 text-center text-xs text-black/40 dark:text-white/40 animate-pulse font-mono">
             Dokümanlar yükleniyor...
           </div>
         ) : error ? (
           <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-xs text-rose-600 font-mono">
             {error}
           </div>
-        ) : documents.length === 0 ? (
+        ) : filteredDocuments.length === 0 ? (
           <div className="p-16 text-center bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl">
-            <h3 className="font-serif text-xl font-medium mb-1">Bu projede henüz doküman bulunmuyor</h3>
-            <p className="text-xs text-black/50 dark:text-white/50 mb-6">Yeni bir akademik makale (PDF) yükleyerek otomatik analizi başlatın.</p>
-            {userRole !== 'viewer' && (
+            <h3 className="font-serif text-xl font-medium mb-1 text-[#0A0A0A] dark:text-white">
+              {documents.length > 0 ? 'Seçili etiketlerle eşleşen doküman bulunamadı' : 'Bu projede henüz doküman bulunmuyor'}
+            </h3>
+            <p className="text-xs text-black/50 dark:text-white/50 mb-6">
+              {documents.length > 0 ? 'Filtreleri temizleyerek tüm dokümanları görüntüleyebilirsiniz.' : 'Yeni bir akademik makale (PDF) yükleyerek otomatik analizi başlatın.'}
+            </p>
+            {documents.length > 0 ? (
+              <button
+                onClick={clearTagFilters}
+                className="px-5 py-2 rounded-full text-xs font-medium border border-black/[0.1] dark:border-white/[0.1] text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all"
+              >
+                Filtreleri Temizle
+              </button>
+            ) : userRole !== 'viewer' ? (
               <button
                 onClick={onNavigateUpload}
                 className="px-6 py-2.5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-sm"
               >
                 + Doküman Yükle
               </button>
-            )}
+            ) : null}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {documents.map((doc) => (
+            {filteredDocuments.map((doc) => (
               <DocumentCard
                 key={doc.id}
                 document={doc}
                 onClick={onSelectDocument}
                 onDelete={userRole !== 'viewer' ? (docId, _e) => handleDeleteDoc(docId) : undefined}
+                onTagsUpdated={handleTagsUpdated}
               />
             ))}
           </div>

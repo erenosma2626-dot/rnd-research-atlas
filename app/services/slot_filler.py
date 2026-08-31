@@ -343,6 +343,7 @@ def fill_section(
             title=group.title,
             content_type="error",
             content={
+                "error": f"Bölüm oluşturulamadı: {str(e)}",
                 "message": "Bu bölüm oluşturulurken bir hata oluştu. Lütfen yeniden deneyin.",
                 "error_details": str(e),
             },
@@ -475,6 +476,7 @@ def fill_narrative_section(
             title=title,
             content_type="error",
             content={
+                "error": f"Bölüm oluşturulamadı: {str(e)}",
                 "message": "Bu bölüm oluşturulurken bir hata oluştu. Lütfen yeniden deneyin.",
                 "error_details": str(e),
             },

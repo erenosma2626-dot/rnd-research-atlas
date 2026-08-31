@@ -11,6 +11,7 @@ from app.db.models import (
     Canvas,
     CanvasItem,
     Document,
+    DocumentTag,
     Note,
     Project,
     ProjectDocument,
@@ -18,6 +19,7 @@ from app.db.models import (
     ProjectMember,
     Report,
     Section,
+    Tag,
     User,
 )
 
@@ -117,6 +119,85 @@ class DocumentRepository:
         )
         await self.session.execute(stmt)
         await self.session.flush()
+
+    async def get_tags(self, document_id: UUID) -> list[str]:
+        """Dokümana atanmış etiket isimlerini döner."""
+        stmt = (
+            select(Tag.name)
+            .join(DocumentTag, DocumentTag.tag_id == Tag.id)
+            .where(DocumentTag.document_id == document_id)
+            .order_by(Tag.name)
+        )
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def get_tags_for_documents_batch(self, document_ids: list[UUID]) -> dict[UUID, list[str]]:
+        """Çoklu dokümanın etiketlerini toplu olarak döner."""
+        tag_map: dict[UUID, list[str]] = {d_id: [] for d_id in document_ids}
+        if not document_ids:
+            return tag_map
+        try:
+            stmt = (
+                select(DocumentTag.document_id, Tag.name)
+                .join(Tag, Tag.id == DocumentTag.tag_id)
+                .where(DocumentTag.document_id.in_(document_ids))
+                .order_by(Tag.name)
+            )
+            res = await self.session.execute(stmt)
+            if hasattr(res, "all"):
+                rows = res.all()
+                if inspect.isawaitable(rows):
+                    rows = await rows
+                if isinstance(rows, (list, tuple)):
+                    for row in rows:
+                        if isinstance(row, (list, tuple)) and len(row) >= 2:
+                            d_id, tag_name = row[0], row[1]
+                            if d_id in tag_map:
+                                tag_map[d_id].append(tag_name)
+        except Exception:
+            pass
+        return tag_map
+
+    async def add_tag(self, document_id: UUID, tag_name: str) -> list[str]:
+        """Dokümana etiket ekler."""
+        clean_tag = tag_name.strip()
+        if not clean_tag:
+            return await self.get_tags(document_id)
+
+        t_stmt = select(Tag).where(Tag.name == clean_tag)
+        t_res = await self.session.execute(t_stmt)
+        tag = t_res.scalar_one_or_none()
+        if not tag:
+            tag = Tag(id=uuid4(), name=clean_tag)
+            self.session.add(tag)
+            await self.session.flush()
+
+        dt_stmt = select(DocumentTag).where(
+            DocumentTag.document_id == document_id, DocumentTag.tag_id == tag.id
+        )
+        dt_res = await self.session.execute(dt_stmt)
+        if not dt_res.scalar_one_or_none():
+            dt = DocumentTag(document_id=document_id, tag_id=tag.id)
+            self.session.add(dt)
+            await self.session.flush()
+
+        return await self.get_tags(document_id)
+
+    async def remove_tag(self, document_id: UUID, tag_name: str) -> list[str]:
+        """Dokümandan etiket kaldırır."""
+        clean_tag = tag_name.strip()
+        t_stmt = select(Tag).where(Tag.name == clean_tag)
+        t_res = await self.session.execute(t_stmt)
+        tag = t_res.scalar_one_or_none()
+        if tag:
+            from sqlalchemy import delete
+            dt_del = delete(DocumentTag).where(
+                DocumentTag.document_id == document_id, DocumentTag.tag_id == tag.id
+            )
+            await self.session.execute(dt_del)
+            await self.session.flush()
+
+        return await self.get_tags(document_id)
 
     async def update_plan_state(
         self,
@@ -234,6 +315,19 @@ class SectionRepository:
         stmt = select(Section).where(Section.id == section_id, Section.deleted_at.is_(None))
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_many_by_ids(self, section_ids: list[UUID]) -> list[Section]:
+        """Kimlik listesine göre aktif bölümleri toplu olarak döner."""
+        if not section_ids:
+            return []
+        stmt = select(Section).where(Section.id.in_(section_ids), Section.deleted_at.is_(None))
+        result = await self.session.execute(stmt)
+        import inspect
+        if inspect.isawaitable(result):
+            result = await result
+        if hasattr(result, "scalars"):
+            return list(result.scalars().all())
+        return []
 
     async def update(
         self,

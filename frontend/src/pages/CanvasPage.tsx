@@ -320,24 +320,34 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         } else if (item.item_type === 'section_box') {
           const w = item.content?.width;
           const h = item.content?.height;
+          const sec = item.section_content;
+          const title = sec?.title || item.content?.title || 'Bölüm';
+          const contentType = (sec?.content_type || item.content?.content_type || 'prose') as any;
+          const content = sec?.content || item.content?.content || item.content || {};
+          const figures = sec?.figures || item.content?.figures || [];
+          const keyFinding = sec?.key_finding || item.content?.key_finding || null;
+          const diagram = sec?.diagram || item.content?.diagram || null;
+          const order = sec?.order || item.content?.order || 1;
+
           flowNodes.push({
             id: item.id,
             type: 'section_box',
             position: { x: item.position_x, y: item.position_y },
             style: w && h ? { width: w, height: h } : undefined,
             data: {
-              section_id: item.ref_id || item.id,
+              section_id: (sec?.id || item.ref_id || item.id) as string,
               itemId: item.id,
               document_id: item.content?.document_id,
-              title: item.content?.title || 'Bölüm',
-              content_type: item.content?.content_type || 'prose',
-              content: item.content?.content || item.content || {},
-              order: item.content?.order || 1,
+              title,
+              content_type: contentType,
+              content,
+              order,
               width: w,
               height: h,
               is_expanded: item.content?.is_expanded || false,
-              figures: item.content?.figures || [],
-              key_finding: item.content?.key_finding,
+              figures,
+              key_finding: keyFinding,
+              diagram,
               onRemoveFromCanvas: () => handleDeleteItem(item.id),
               onResizeStop: handleSectionResizeStop,
               onToggleExpand: handleToggleExpandSection,
@@ -780,7 +790,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
             'section_box',
             posX,
             posY,
-            sec.documentId,
+            sec.sectionId || sec.documentId,
             {
               section_id: sec.sectionId,
               title: sec.title,

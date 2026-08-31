@@ -67,6 +67,7 @@ class DocumentListItem(BaseModel):
     uploaded_at: datetime
     processing_status: str
     error_message: Optional[str] = None
+    tags: list[str] = []
 
 
 class DocumentStatusResponse(BaseModel):
@@ -266,6 +267,7 @@ async def list_project_documents(
     """Proje dökümanlarını listeler."""
     repo = DocumentRepository(db)
     docs = await repo.list_by_project(project_id, include_deleted=False)
+    tag_map = await repo.get_tags_for_documents_batch([d.id for d in docs])
     return [
         DocumentListItem(
             id=d.id,
@@ -274,6 +276,7 @@ async def list_project_documents(
             uploaded_at=d.uploaded_at,
             processing_status=d.processing_status,
             error_message=d.error_message,
+            tags=tag_map.get(d.id, []),
         )
         for d in docs
     ]
@@ -491,4 +494,52 @@ async def delete_document_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Doküman bulunamadı.",
         )
-    return {"status": "deleted", "document_id": str(document_id)}
+    return {"status": "deleted", "id": str(document_id), "document_id": str(document_id)}
+
+
+class TagOperationRequest(BaseModel):
+    name: str
+
+
+@router.get(
+    "/documents/{document_id}/tags",
+    response_model=list[str],
+    summary="Dokümanın etiketlerini listele",
+)
+async def get_document_tags_endpoint(
+    document_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> list[str]:
+    doc_repo = DocumentRepository(db)
+    return await doc_repo.get_tags(document_id)
+
+
+@router.post(
+    "/documents/{document_id}/tags",
+    response_model=list[str],
+    summary="Dokümana etiket ata",
+)
+async def add_document_tag_endpoint(
+    document_id: UUID,
+    request: TagOperationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> list[str]:
+    doc_repo = DocumentRepository(db)
+    return await doc_repo.add_tag(document_id, request.name)
+
+
+@router.delete(
+    "/documents/{document_id}/tags/{tag_name}",
+    response_model=list[str],
+    summary="Dokümandan etiket kaldır",
+)
+async def remove_document_tag_endpoint(
+    document_id: UUID,
+    tag_name: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> list[str]:
+    doc_repo = DocumentRepository(db)
+    return await doc_repo.remove_tag(document_id, tag_name)

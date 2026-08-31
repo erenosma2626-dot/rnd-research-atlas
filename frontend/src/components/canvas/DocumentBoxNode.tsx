@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { ChevronDown, Folder, Layers, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, Folder, Trash2, User } from 'lucide-react';
 import { UserSummary } from '../../api/client';
 import { ProcessingStatusBadge } from '../ProcessingStatusBadge';
 import { SectionPickerMenu } from './SectionPickerMenu';
@@ -23,10 +23,6 @@ export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ data
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(data.title || 'İsimsiz Doküman');
 
-  const contributorInitial = data.added_by?.display_name
-    ? data.added_by.display_name.charAt(0).toUpperCase()
-    : data.added_by?.email?.charAt(0).toUpperCase() || 'U';
-
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
     const trimmed = titleValue.trim();
@@ -43,7 +39,7 @@ export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ data
         selected
           ? 'border-black dark:border-white ring-2 ring-black/10 dark:ring-white/20'
           : data.is_own === false
-          ? 'border-indigo-200 dark:border-indigo-900/60'
+          ? 'border-black/20 dark:border-white/20'
           : 'border-black/[0.08] dark:border-white/[0.1] hover:border-black/20 dark:hover:border-white/20'
       }`}
     >
@@ -78,15 +74,15 @@ export const DocumentBoxNode: React.FC<NodeProps<DocumentBoxNodeData>> = ({ data
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white flex items-center justify-center flex-shrink-0">
-            <Layers className="w-4 h-4" />
+            <BookOpen className="w-4 h-4 text-black/70 dark:text-white/70" strokeWidth={1.5} />
           </div>
 
           {data.is_own === false && data.added_by && (
             <span
-              className="w-5 h-5 rounded-full bg-black/10 dark:bg-white/10 text-[10px] font-bold flex items-center justify-center font-mono"
+              className="w-5 h-5 rounded-full bg-black/5 dark:bg-white/10 text-black/60 dark:text-white/60 flex items-center justify-center"
               title={`${data.added_by.display_name} tarafından eklendi`}
             >
-              {contributorInitial}
+              <User className="w-3 h-3" />
             </span>
           )}
         </div>

@@ -48,6 +48,8 @@ htmlcov/
 
 # Temporary files
 /tmp/
+.DS_Store
+*.DS_Store
 *.tmp
 logs/
 chroma_data/

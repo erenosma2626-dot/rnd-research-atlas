@@ -80,14 +80,11 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin }) => 
       <div className="w-full max-w-sm bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] rounded-3xl p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
         {/* Header / Brand */}
         <div className="text-center mb-6">
-          <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#0A0A0A] dark:text-white font-mono flex items-center justify-center font-bold text-sm">
-            A
-          </div>
           <h2 className="font-serif text-2xl font-medium tracking-tight text-[#0A0A0A] dark:text-white">
             Hesap Oluştur
           </h2>
           <p className="text-xs text-black/50 dark:text-white/50 mt-1">
-            ArGe araştırma asistanınıza katılın
+            PaperCanvas araştırma asistanınıza katılın
           </p>
         </div>
 
