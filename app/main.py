@@ -39,10 +39,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+import os
+
+frontend_url = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+]
+if frontend_url:
+    allowed_origins.append(frontend_url)
+    if not frontend_url.startswith("http://") and not frontend_url.startswith("https://"):
+        allowed_origins.append(f"https://{frontend_url}")
+
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if frontend_url else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

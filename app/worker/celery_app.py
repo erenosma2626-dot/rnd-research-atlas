@@ -30,3 +30,9 @@ celery_app.conf.update(
     task_time_limit=1800,  # 30 dakika (rate limit ve geniş dokümanlar için güvenli süre)
     task_soft_time_limit=1700,
 )
+
+if redis_url.startswith("rediss://"):
+    celery_app.conf.update(
+        broker_use_ssl={"ssl_cert_reqs": None},
+        redis_backend_use_ssl={"ssl_cert_reqs": None},
+    )

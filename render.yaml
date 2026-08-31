@@ -1,0 +1,84 @@
+services:
+  - type: web
+    name: rnd-paper-canvas-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_CLASSIFY_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: GROQ_CHAT_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: GROQ_DIAGRAM_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: GROQ_FORMULA_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: "papercanvas-documents"
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: FORMULA_MODE
+        value: "hybrid"
+      - key: REPORT_LANGUAGE
+        value: "tr"
+      - key: FRONTEND_URL
+        sync: false
+
+  - type: worker
+    name: rnd-paper-canvas-worker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.worker.celery_app worker --loglevel=info
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_CLASSIFY_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: GROQ_CHAT_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: GROQ_DIAGRAM_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: GROQ_FORMULA_MODEL
+        value: "openai/gpt-oss-20b"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: "papercanvas-documents"
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: FORMULA_MODE
+        value: "hybrid"
+      - key: REPORT_LANGUAGE
+        value: "tr"
