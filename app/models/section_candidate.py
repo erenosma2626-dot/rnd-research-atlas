@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 from app.models.report_section import FilledSection
 
@@ -9,6 +10,7 @@ class SectionCandidate(BaseModel):
         ..., description="Bölüm grubu kimliği (section_schema.py'deki group_id ile aynı)"
     )
     section_title: str = Field(..., description="Bölüm başlığı")
+    title: Optional[str] = Field(default=None, description="Bölüm başlığı takma adı")
     detected: bool = Field(
         default=True, description="Bu bölüm pipeline tarafından tespit edildi mi"
     )

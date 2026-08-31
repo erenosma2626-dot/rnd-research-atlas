@@ -1,10 +1,22 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { BarChart3, BookOpen, FileText, Image as ImageIcon, List as ListIcon, Table as TableIcon } from 'lucide-react';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import {
+  BarChart3,
+  BookOpen,
+  Cpu,
+  FileText,
+  Image as ImageIcon,
+  List as ListIcon,
+  Table as TableIcon,
+} from 'lucide-react';
 import { FilledSection, GeneratedDiagram } from '../api/client';
+import { ChartSection } from './ChartSection';
 import { DiagramView } from './DiagramView';
 import { ImageGallerySection } from './ImageGallerySection';
-import { ChartSection } from './ChartSection';
+import { ModuleListView } from './ModuleListView';
 
 interface SectionCardProps {
   section: FilledSection;
@@ -19,6 +31,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
         return <TableIcon className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
       case 'list':
         return <ListIcon className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
+      case 'module_list':
+        return <Cpu className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
       case 'image_gallery':
         return <ImageIcon className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
       case 'chart':
@@ -27,6 +41,10 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
         return <FileText className="w-4 h-4 text-[#0A0A0A] dark:text-white" />;
     }
   };
+
+  // Diagram from prop or attached to section JSON
+  const activeDiagram = diagram || section.diagram;
+  const mermaidCode = activeDiagram?.mermaid_code || (activeDiagram as any)?.code;
 
   return (
     <article className="group p-7 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all duration-200 mb-8">
@@ -43,9 +61,6 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
                 {section.title}
               </h2>
             </div>
-            <span className="text-xs text-black/40 dark:text-white/40 font-mono">
-              {section.group_id}
-            </span>
           </div>
         </div>
 
@@ -66,12 +81,18 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
         )}
       </div>
 
-      {/* Content Rendering */}
+      {/* Content Rendering with KaTeX LaTeX Support */}
       <div className="pt-5 text-sm text-[#0A0A0A]/90 dark:text-white/90 leading-relaxed font-sans">
         {section.content_type === 'prose' && (
           <div className="prose dark:prose-invert max-w-none prose-p:my-2.5 prose-headings:font-serif prose-headings:font-medium">
-            <ReactMarkdown>{section.content?.text || ''}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+              {section.content?.text || ''}
+            </ReactMarkdown>
           </div>
+        )}
+
+        {section.content_type === 'module_list' && (
+          <ModuleListView content={section.content as any} />
         )}
 
         {section.content_type === 'list' && (
@@ -79,7 +100,11 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
             {section.content?.items?.map((item: any, i: number) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#0A0A0A] dark:bg-white mt-2 shrink-0" />
-                <span>{item}</span>
+                <div className="flex-1 prose prose-sm dark:prose-invert max-w-none prose-p:my-0">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {typeof item === 'string' ? item : JSON.stringify(item)}
+                  </ReactMarkdown>
+                </div>
               </li>
             ))}
           </ul>
@@ -102,7 +127,9 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
                   <tr key={rIdx} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
                     {row.map((cell: any, cIdx: number) => (
                       <td key={cIdx} className="px-4 py-3">
-                        {cell}
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                          {String(cell || '')}
+                        </ReactMarkdown>
                       </td>
                     ))}
                   </tr>
@@ -125,16 +152,21 @@ export const SectionCard: React.FC<SectionCardProps> = ({ section, diagram, inde
         )}
 
         {section.content_type === 'error' && (
-          <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs font-mono">
-            {section.content?.error || 'Bu bölüm üretilirken bir hata oluştu.'}
+          <div className="p-4 rounded-2xl bg-amber-500/[0.06] border border-amber-500/20 dark:bg-amber-500/[0.08] text-amber-900 dark:text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span>
+                {section.content?.message || 'Bu bölüm üretilirken bir gecikme oluştu. Lütfen yeniden deneyin.'}
+              </span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Render Attached Diagram */}
-      {diagram && diagram.mermaid_code && (
-        <div className="mt-4">
-          <DiagramView mermaidCode={diagram.mermaid_code} title="Diyagram / Akış Şeması" />
+      {/* Render Attached Diagram (Mermaid) */}
+      {mermaidCode && (
+        <div className="mt-6 pt-4 border-t border-black/[0.04] dark:border-white/[0.06]">
+          <DiagramView mermaidCode={mermaidCode} title="Diyagram / Akış Şeması" />
         </div>
       )}
     </article>

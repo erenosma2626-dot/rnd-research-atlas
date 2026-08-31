@@ -117,6 +117,20 @@ class DocumentRepository:
         await self.session.execute(stmt)
         await self.session.flush()
 
+    async def update_plan_state(
+        self,
+        document_id: UUID,
+        plan_state: dict[str, Any],
+    ) -> None:
+        """Dokümanın ön-üretim plan durumunu (bölüm adayları, figürler) günceller."""
+        stmt = (
+            update(Document)
+            .where(Document.id == document_id)
+            .values(plan_state=plan_state)
+        )
+        await self.session.execute(stmt)
+        await self.session.flush()
+
 
 class ReportRepository:
     """Rapor tablosu için veri erişim katmanı."""

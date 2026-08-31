@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDocumentStatus } from '../api/client';
 
-export type PollingStatus = 'pending' | 'processing' | 'done' | 'failed' | 'idle';
+export type PollingStatus =
+  | 'pending'
+  | 'processing'
+  | 'parsing'
+  | 'extracting_formulas'
+  | 'classifying'
+  | 'indexing'
+  | 'awaiting_plan_approval'
+  | 'generating_report'
+  | 'done'
+  | 'failed'
+  | 'idle';
 
 export interface UsePollDocumentStatusResult {
   status: PollingStatus;

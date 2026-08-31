@@ -8,3 +8,9 @@ DIAGRAM_ELIGIBLE_GROUPS = {
     "optimization_formulation": "flowchart",  # optimizasyon akışı
     "decision_tree": "flowchart_decision",  # karar ağacı / karar düğümleri (diamond)
 }
+
+
+def is_diagram_eligible(group_id: str) -> bool:
+    """Belirtilen bölüm grubunun diyagram üretimine uygun olup olmadığını döner."""
+    return group_id in DIAGRAM_ELIGIBLE_GROUPS
+

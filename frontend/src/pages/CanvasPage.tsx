@@ -13,6 +13,7 @@ import ReactFlow, {
   addEdge,
   ReactFlowProvider,
   useReactFlow,
+  SelectionMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -37,8 +38,10 @@ import { DrawingNode, DrawingNodeData } from '../components/canvas/DrawingNode';
 import { InventoryPanel } from '../components/canvas/InventoryPanel';
 import { NoteNode } from '../components/canvas/NoteNode';
 import { SectionBoxNode, SectionBoxNodeData } from '../components/canvas/SectionBoxNode';
-import { ShapeNode, ShapeNodeData, ShapeType } from '../components/canvas/ShapeNode';
-import { StickyNoteNode } from '../components/canvas/StickyNoteNode';
+import { ShapeNode, ShapeNodeData } from '../components/canvas/ShapeNode';
+import { StickyNoteNode, StickyNoteNodeData } from '../components/canvas/StickyNoteNode';
+import { TextNode, TextNodeData } from '../components/canvas/TextNode';
+import { ToolModeProvider, useToolMode } from '../components/canvas/ToolModeContext';
 import { useTheme } from '../theme/ThemeContext';
 
 interface CanvasPageProps {
@@ -57,13 +60,13 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
   const { isDark } = useTheme();
   const { screenToFlowPosition, getNodes } = useReactFlow();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { toolMode, activeShapeType, activeColor } = useToolMode();
 
   const [canvases, setCanvases] = useState<CanvasSummary[]>([]);
   const [activeCanvasId, setActiveCanvasId] = useState<string>(initialCanvasId || '');
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
 
-  // Tools & State
-  const [isPenActive, setIsPenActive] = useState(false);
+  // Pen Drawing State
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPathPoints, setCurrentPathPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [copiedNodes, setCopiedNodes] = useState<Node<any>[]>([]);
@@ -96,19 +99,6 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     fetchCanvases();
   }, [fetchCanvases]);
 
-  // Custom Node Tipleri
-  const nodeTypes = useMemo(
-    () => ({
-      document_box: DocumentBoxNode,
-      section_box: SectionBoxNode,
-      note: NoteNode,
-      sticky_note: StickyNoteNode,
-      drawing: DrawingNode,
-      shape: ShapeNode,
-    }),
-    []
-  );
-
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
       try {
@@ -126,6 +116,17 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     async (itemId: string, text: string) => {
       try {
         await updateCanvasItem(itemId, { content: { text } });
+      } catch {
+        // sessiz hata
+      }
+    },
+    []
+  );
+
+  const handleUpdateNoteColor = useCallback(
+    async (itemId: string, color: string) => {
+      try {
+        await updateCanvasItem(itemId, { content: { color } });
       } catch {
         // sessiz hata
       }
@@ -167,8 +168,9 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
             'section_box',
             posX,
             posY,
-            secId,
+            documentId,
             {
+              section_id: secId,
               title: sec.title,
               content_type: cType,
               content: sec.content,
@@ -237,6 +239,20 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     [getNodes, setNodes]
   );
 
+  // Custom Node Tipleri
+  const nodeTypes = useMemo(
+    () => ({
+      document_box: DocumentBoxNode,
+      section_box: SectionBoxNode,
+      note: NoteNode,
+      sticky_note: StickyNoteNode,
+      drawing: DrawingNode,
+      shape: ShapeNode,
+      text: TextNode,
+    }),
+    []
+  );
+
   // 2. Aktif Canvas Elemanlarını Çek
   const fetchItems = useCallback(async () => {
     if (!activeCanvasId) {
@@ -293,8 +309,21 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
             position: { x: item.position_x, y: item.position_y },
             data: {
               text: item.content?.text || '',
-              color: item.content?.color || '#FEF08A',
+              color: item.content?.color || 'amber',
               parent_item_id: item.content?.parent_item_id,
+              onTextChange: (newText: string) => handleUpdateNoteText(item.id, newText),
+              onColorChange: (newColor: string) => handleUpdateNoteColor(item.id, newColor),
+              onDelete: () => handleDeleteItem(item.id),
+            },
+          });
+        } else if (item.item_type === 'text') {
+          flowNodes.push({
+            id: item.id,
+            type: 'text',
+            position: { x: item.position_x, y: item.position_y },
+            data: {
+              text: item.content?.text || '',
+              itemId: item.id,
               onTextChange: (newText: string) => handleUpdateNoteText(item.id, newText),
               onDelete: () => handleDeleteItem(item.id),
             },
@@ -319,11 +348,8 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
             position: { x: item.position_x, y: item.position_y },
             data: {
               shape_type: item.content?.shape_type || 'rectangle',
-              color: item.content?.color,
+              color: item.content?.color || 'neutral',
               background: item.content?.background,
-              text: item.content?.text || '',
-              onTextChange: (newText: string) =>
-                updateCanvasItem(item.id, { content: { ...item.content, text: newText } }),
             },
           });
         } else if (item.item_type === 'note') {
@@ -368,6 +394,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     onSelectDocument,
     handleDeleteItem,
     handleUpdateNoteText,
+    handleUpdateNoteColor,
     handleExplodeSections,
     handleCollapseSections,
     isDark,
@@ -466,21 +493,17 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     [setEdges]
   );
 
-  // Node veya Edge silme
+  // Toplu Düğüm ve Kenar Silme
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
-      for (const n of deleted) {
-        deleteCanvasItem(n.id).catch(() => {});
-      }
+      Promise.all(deleted.map((n) => deleteCanvasItem(n.id).catch(() => {})));
     },
     []
   );
 
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
-      for (const e of deleted) {
-        deleteCanvasItem(e.id).catch(() => {});
-      }
+      Promise.all(deleted.map((e) => deleteCanvasItem(e.id).catch(() => {})));
     },
     []
   );
@@ -526,7 +549,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     }
   };
 
-  // 4. Kutucuk, Şekil ve Not Ekleme Araçları
+  // 4. Kutucuk, Şekil, Metin ve Not Ekleme
   const handleAddDocumentToCanvas = async (doc: DocumentSummary) => {
     const posX = 150 + Math.random() * 80;
     const posY = 150 + Math.random() * 80;
@@ -564,36 +587,32 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
   };
 
   const handleAddNoteToCanvas = async () => {
-    // Eğer seçili bir node varsa ona yapışık Sticky Note oluştur
-    const selectedNode = nodes.find((n) => n.selected);
+    const selectedNode = getNodes().find((n) => n.selected);
     const parentId = selectedNode ? selectedNode.id : undefined;
 
     const posX = selectedNode ? selectedNode.position.x + 300 : 200 + Math.random() * 60;
     const posY = selectedNode ? selectedNode.position.y : 200 + Math.random() * 60;
 
     try {
-      const itemType = parentId ? 'sticky_note' : 'note';
       const newItem = await addCanvasItem(
         activeCanvasId,
-        itemType,
+        'sticky_note',
         posX,
         posY,
         null,
-        { text: '', parent_item_id: parentId, color: '#FEF08A' }
+        { text: '', parent_item_id: parentId, color: activeColor || 'amber' }
       );
 
-      const newNode: Node<any> = {
+      const newNode: Node<StickyNoteNodeData> = {
         id: newItem.id,
-        type: itemType,
+        type: 'sticky_note',
         position: { x: newItem.position_x, y: newItem.position_y },
         data: {
           text: '',
-          itemId: newItem.id,
+          color: activeColor || 'amber',
           parent_item_id: parentId,
-          color: '#FEF08A',
-          onUpdateText: handleUpdateNoteText,
           onTextChange: (newText: string) => handleUpdateNoteText(newItem.id, newText),
-          onDeleteItem: () => handleDeleteItem(newItem.id),
+          onColorChange: (newColor: string) => handleUpdateNoteColor(newItem.id, newColor),
           onDelete: () => handleDeleteItem(newItem.id),
         },
       };
@@ -601,38 +620,6 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       setNodes((nds) => [...nds, newNode]);
     } catch (err: any) {
       alert(err.message || 'Not eklenemedi.');
-    }
-  };
-
-  const handleAddShapeToCanvas = async (shapeType: ShapeType) => {
-    const posX = 220 + Math.random() * 60;
-    const posY = 220 + Math.random() * 60;
-
-    try {
-      const newItem = await addCanvasItem(
-        activeCanvasId,
-        'shape',
-        posX,
-        posY,
-        null,
-        { shape_type: shapeType, width: 140, height: 70 }
-      );
-
-      const newNode: Node<ShapeNodeData> = {
-        id: newItem.id,
-        type: 'shape',
-        position: { x: newItem.position_x, y: newItem.position_y },
-        data: {
-          shape_type: shapeType,
-          text: shapeType === 'text' ? 'Notunuz...' : '',
-          onTextChange: (newText: string) =>
-            updateCanvasItem(newItem.id, { content: { shape_type: shapeType, text: newText } }),
-        },
-      };
-
-      setNodes((nds) => [...nds, newNode]);
-    } catch (err: any) {
-      alert(err.message || 'Şekil eklenemedi.');
     }
   };
 
@@ -674,22 +661,84 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     }
   };
 
-  // 5. Kalem Aracı Çizim Olayları
+  // 5. Tuval Tıklama ve Çizim Olayları (Tool Mode Handling)
+  const handleCanvasClick = async (e: React.MouseEvent) => {
+    // Şekil veya Metin modundaysa tıklanan tam koordinata eleman ekle
+    if (toolMode === 'shape') {
+      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      try {
+        const newItem = await addCanvasItem(
+          activeCanvasId,
+          'shape',
+          Math.round(pos.x),
+          Math.round(pos.y),
+          null,
+          { shape_type: activeShapeType, color: activeColor || 'neutral', width: 140, height: 80 }
+        );
+
+        const newNode: Node<ShapeNodeData> = {
+          id: newItem.id,
+          type: 'shape',
+          position: { x: pos.x, y: pos.y },
+          data: {
+            shape_type: activeShapeType,
+            color: activeColor || 'neutral',
+          },
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+      } catch (err: any) {
+        console.warn('Şekil eklenemedi:', err);
+      }
+      // NOT: toolMode 'shape' olarak KALIR, kullanıcı başka araç seçene kadar peş peşe şekil ekleyebilir
+    } else if (toolMode === 'text') {
+      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      try {
+        const newItem = await addCanvasItem(
+          activeCanvasId,
+          'text',
+          Math.round(pos.x),
+          Math.round(pos.y),
+          null,
+          { text: '' }
+        );
+
+        const newNode: Node<TextNodeData> = {
+          id: newItem.id,
+          type: 'text',
+          position: { x: pos.x, y: pos.y },
+          data: {
+            text: '',
+            itemId: newItem.id,
+            onTextChange: (newText: string) => handleUpdateNoteText(newItem.id, newText),
+            onDelete: () => handleDeleteItem(newItem.id),
+          },
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+      } catch (err: any) {
+        console.warn('Metin kutusu eklenemedi:', err);
+      }
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isPenActive) return;
-    const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    setIsDrawing(true);
-    setCurrentPathPoints([{ x: pos.x, y: pos.y }]);
+    if (toolMode === 'pen') {
+      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      setIsDrawing(true);
+      setCurrentPathPoints([{ x: pos.x, y: pos.y }]);
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPenActive || !isDrawing) return;
-    const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    setCurrentPathPoints((prev) => [...prev, { x: pos.x, y: pos.y }]);
+    if (toolMode === 'pen' && isDrawing) {
+      const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      setCurrentPathPoints((prev) => [...prev, { x: pos.x, y: pos.y }]);
+    }
   };
 
   const handleMouseUp = async () => {
-    if (!isPenActive || !isDrawing || currentPathPoints.length < 2) {
+    if (toolMode !== 'pen' || !isDrawing || currentPathPoints.length < 2) {
       setIsDrawing(false);
       setCurrentPathPoints([]);
       return;
@@ -697,7 +746,6 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
 
     setIsDrawing(false);
 
-    // Calculate bounding box & normalize path string
     const minX = Math.min(...currentPathPoints.map((p) => p.x));
     const minY = Math.min(...currentPathPoints.map((p) => p.y));
     const maxX = Math.max(...currentPathPoints.map((p) => p.x));
@@ -741,10 +789,9 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     }
   };
 
-  // 6. Klavye Kısayolları (Ctrl+C / Ctrl+V Kopyala-Yapıştır)
+  // 6. Klavye Kısayolları (Ctrl+C / Ctrl+V Kopyala-Yapıştır, Delete Toplu Silme)
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // Input veya Textarea içindeyken kopyalama yapıştırma engellenmesin
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -752,7 +799,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       const isPaste = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'v';
 
       if (isCopy) {
-        const selected = nodes.filter((n) => n.selected);
+        const selected = getNodes().filter((n) => n.selected);
         if (selected.length > 0) {
           setCopiedNodes(selected);
         }
@@ -795,7 +842,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, copiedNodes, activeCanvasId, setNodes]);
+  }, [copiedNodes, activeCanvasId, getNodes, setNodes]);
 
   // 7. Envanterden Sürükle-Bırak (HTML5 Drag and Drop)
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -863,11 +910,18 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       ref={reactFlowWrapper}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onClick={handleCanvasClick}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       className={`relative w-screen h-screen overflow-hidden bg-white dark:bg-[#0A0A0A] transition-colors duration-200 ${
-        isPenActive ? 'cursor-crosshair' : ''
+        toolMode === 'pen'
+          ? 'cursor-crosshair'
+          : toolMode === 'eraser'
+          ? 'cursor-pointer'
+          : toolMode === 'shape' || toolMode === 'text'
+          ? 'cursor-crosshair'
+          : ''
       }`}
     >
       {/* Üst Araç Çubuğu & Sekmeler */}
@@ -882,16 +936,13 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         onAddDocumentToCanvas={handleAddDocumentToCanvas}
         onAddNoteToCanvas={handleAddNoteToCanvas}
         onAddSectionToCanvas={handleAddSectionToCanvas}
-        onAddShapeToCanvas={handleAddShapeToCanvas}
-        isPenActive={isPenActive}
-        onTogglePen={() => setIsPenActive((prev) => !prev)}
         onToggleInventory={() => setIsInventoryOpen((prev) => !prev)}
         isInventoryOpen={isInventoryOpen}
       />
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 dark:bg-[#0A0A0A]/40 backdrop-blur-xs">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 dark:bg-[#0A0A0A]/40 backdrop-blur-xs pointer-events-none">
           <div className="text-xs font-mono text-black/50 dark:text-white/50 animate-pulse">
             Canvas yükleniyor...
           </div>
@@ -911,7 +962,13 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         onEdgesDelete={onEdgesDelete}
         nodeTypes={nodeTypes}
         fitView
-        panOnDrag={!isPenActive}
+        // Tool Mode Entegrasyonu
+        selectionOnDrag={toolMode === 'select'}
+        panOnDrag={toolMode === 'select' ? [1, 2] : false}
+        selectionMode={SelectionMode.Partial}
+        multiSelectionKeyCode="Shift"
+        nodesDraggable={toolMode === 'select'}
+        elementsSelectable={toolMode === 'select'}
         className="w-full h-full"
       >
         <Background
@@ -973,7 +1030,9 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
 
 export const CanvasPage: React.FC<CanvasPageProps> = (props) => (
   <ReactFlowProvider>
-    <CanvasContent {...props} />
+    <ToolModeProvider>
+      <CanvasContent {...props} />
+    </ToolModeProvider>
   </ReactFlowProvider>
 );
 

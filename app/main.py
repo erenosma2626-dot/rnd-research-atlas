@@ -14,6 +14,7 @@ from app.routers.formula import router as formula_router
 from app.routers.index import router as index_router
 from app.routers.invites import router as invites_router
 from app.routers.parse import router as parse_router
+from app.routers.plan import router as plan_router
 from app.routers.report import router as report_router
 from app.routers.sections import router as sections_router
 
@@ -57,6 +58,7 @@ app.include_router(diagram_router)
 app.include_router(chat_router)
 app.include_router(formula_router)
 app.include_router(documents_router)
+app.include_router(plan_router)
 app.include_router(canvas_router)
 app.include_router(invites_router)
 app.include_router(sections_router)

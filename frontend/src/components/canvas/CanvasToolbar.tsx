@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   Circle,
+  Eraser,
   FilePlus,
+  Hand,
   Layers,
   Minus,
   PenTool as PenIcon,
@@ -15,6 +17,7 @@ import { CanvasSummary, DocumentSummary, listProjectDocuments } from '../../api/
 import { useTheme } from '../../theme/ThemeContext';
 import { CanvasTabs } from './CanvasTabs';
 import { ShapeType } from './ShapeNode';
+import { useToolMode } from './ToolModeContext';
 
 interface CanvasToolbarProps {
   canvases: CanvasSummary[];
@@ -27,9 +30,6 @@ interface CanvasToolbarProps {
   onAddDocumentToCanvas: (doc: DocumentSummary) => void;
   onAddNoteToCanvas: () => void;
   onAddSectionToCanvas?: (title: string, contentType: string, contentText: string) => void;
-  onAddShapeToCanvas?: (shapeType: ShapeType) => void;
-  isPenActive: boolean;
-  onTogglePen: () => void;
   onToggleInventory: () => void;
   isInventoryOpen: boolean;
 }
@@ -45,13 +45,12 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onAddDocumentToCanvas,
   onAddNoteToCanvas,
   onAddSectionToCanvas,
-  onAddShapeToCanvas,
-  isPenActive,
-  onTogglePen,
   onToggleInventory,
   isInventoryOpen,
 }) => {
   const { isDark, toggleTheme } = useTheme();
+  const { toolMode, setToolMode, activeShapeType, setActiveShapeType } = useToolMode();
+
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
@@ -62,6 +61,24 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   const [secTitle, setSecTitle] = useState('');
   const [secType, setSecType] = useState('prose');
   const [secContent, setSecContent] = useState('');
+
+  // Keyboard shortcut: Esc or V to return to 'select' mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'v') {
+        setToolMode('select');
+      } else if (e.key.toLowerCase() === 'p') {
+        setToolMode('pen');
+      } else if (e.key.toLowerCase() === 'e') {
+        setToolMode('eraser');
+      } else if (e.key.toLowerCase() === 't') {
+        setToolMode('text');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setToolMode]);
 
   const handleOpenDocModal = async () => {
     setIsDocModalOpen(true);
@@ -90,6 +107,12 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     setIsSectionModalOpen(false);
   };
 
+  const handleSelectShape = (shape: ShapeType) => {
+    setActiveShapeType(shape);
+    setToolMode('shape');
+    setIsShapeMenuOpen(false);
+  };
+
   return (
     <>
       <header className="absolute top-4 left-6 right-6 z-20 flex items-center justify-between pointer-events-none gap-3">
@@ -115,109 +138,143 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           />
         </div>
 
-        {/* Sağ Alan: Çizim, Şekil, Bölüm, Not, Doküman ve Envanter Araçları */}
-        <div className="flex items-center gap-1.5 bg-white/85 dark:bg-[#0A0A0A]/85 backdrop-blur-md p-1.5 rounded-full border border-black/[0.06] dark:border-white/[0.08] shadow-sm pointer-events-auto">
-          {/* Kalem Aracı (Pen Tool) */}
+        {/* Sağ Alan: Açık Tool Mode Seçici & Eylemler */}
+        <div className="flex items-center gap-1 bg-white/85 dark:bg-[#0A0A0A]/85 backdrop-blur-md p-1.5 rounded-full border border-black/[0.06] dark:border-white/[0.08] shadow-sm pointer-events-auto">
+          {/* 1. El / Seçim Aracı (Varsayılan) */}
           <button
-            onClick={onTogglePen}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              isPenActive
+            onClick={() => setToolMode('select')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              toolMode === 'select'
                 ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
                 : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
             }`}
-            title="Serbest Kalem Çizimi"
+            title="Seçim ve Gezinme Modu (Kısayol: V veya Esc)"
+          >
+            <Hand className="w-3.5 h-3.5" />
+            <span>Seçim</span>
+          </button>
+
+          {/* 2. Kalem Aracı */}
+          <button
+            onClick={() => setToolMode(toolMode === 'pen' ? 'select' : 'pen')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              toolMode === 'pen'
+                ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+            }`}
+            title="Serbest Kalem Çizimi (Kısayol: P)"
           >
             <PenIcon className="w-3.5 h-3.5" />
             <span>Kalem</span>
           </button>
 
-          {/* Şekil Ekle Dropdown */}
+          {/* 3. Silgi Aracı */}
+          <button
+            onClick={() => setToolMode(toolMode === 'eraser' ? 'select' : 'eraser')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              toolMode === 'eraser'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+            }`}
+            title="Çizim Silgisi (Kısayol: E)"
+          >
+            <Eraser className="w-3.5 h-3.5" />
+            <span>Silgi</span>
+          </button>
+
+          {/* 4. Şekil Ekle Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsShapeMenuOpen(!isShapeMenuOpen)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                toolMode === 'shape'
+                  ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
+                  : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+              }`}
+              title="Şekil Ekle (Tuvale tıklayarak yerleştirin)"
             >
-              <Square className="w-3.5 h-3.5" />
-              <span>Şekil</span>
+              {activeShapeType === 'circle' && <Circle className="w-3.5 h-3.5" />}
+              {activeShapeType === 'arrow' && <ArrowRight className="w-3.5 h-3.5" />}
+              {activeShapeType === 'line' && <Minus className="w-3.5 h-3.5" />}
+              {(activeShapeType === 'rectangle' || !activeShapeType) && <Square className="w-3.5 h-3.5" />}
+              <span>Şekil ▾</span>
             </button>
 
             {isShapeMenuOpen && (
               <div className="absolute top-full mt-2 left-0 w-36 bg-white dark:bg-[#141414] rounded-2xl border border-black/[0.08] dark:border-white/[0.1] shadow-xl p-1.5 z-30 space-y-0.5">
                 <button
-                  onClick={() => {
-                    onAddShapeToCanvas?.('rectangle');
-                    setIsShapeMenuOpen(false);
-                  }}
+                  onClick={() => handleSelectShape('rectangle')}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 >
                   <Square className="w-3.5 h-3.5" /> Dikdörtgen
                 </button>
                 <button
-                  onClick={() => {
-                    onAddShapeToCanvas?.('circle');
-                    setIsShapeMenuOpen(false);
-                  }}
+                  onClick={() => handleSelectShape('circle')}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 >
                   <Circle className="w-3.5 h-3.5" /> Daire
                 </button>
                 <button
-                  onClick={() => {
-                    onAddShapeToCanvas?.('arrow');
-                    setIsShapeMenuOpen(false);
-                  }}
+                  onClick={() => handleSelectShape('arrow')}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 >
                   <ArrowRight className="w-3.5 h-3.5" /> Ok
                 </button>
                 <button
-                  onClick={() => {
-                    onAddShapeToCanvas?.('line');
-                    setIsShapeMenuOpen(false);
-                  }}
+                  onClick={() => handleSelectShape('line')}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 >
                   <Minus className="w-3.5 h-3.5" /> Çizgi
-                </button>
-                <button
-                  onClick={() => {
-                    onAddShapeToCanvas?.('text');
-                    setIsShapeMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-                >
-                  <Type className="w-3.5 h-3.5" /> Metin Kutusu
                 </button>
               </div>
             )}
           </div>
 
-          {/* Not / Yapışkan Not Butonu */}
+          {/* 5. Metin Aracı */}
+          <button
+            onClick={() => setToolMode(toolMode === 'text' ? 'select' : 'text')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              toolMode === 'text'
+                ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+            }`}
+            title="Metin Kutusu (Kısayol: T - Tuvale tıklayarak ekleyin)"
+          >
+            <Type className="w-3.5 h-3.5" />
+            <span>Metin</span>
+          </button>
+
+          {/* 6. Not / Yapışkan Not Butonu */}
           <button
             onClick={onAddNoteToCanvas}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            title="Seçili öğeye yapışık veya serbest not ekle"
           >
             <StickyNote className="w-3.5 h-3.5" />
             <span>Not</span>
           </button>
 
-          {/* Manuel Bölüm Ekle Butonu */}
+          {/* 7. Manuel Bölüm Ekle Butonu */}
           <button
             onClick={() => setIsSectionModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            title="Yeni araştırma bölümü oluştur"
           >
             <FilePlus className="w-3.5 h-3.5" />
             <span>Bölüm</span>
           </button>
 
-          {/* Doküman Ekle Butonu */}
+          {/* 8. Doküman Ekle Butonu */}
           <button
             onClick={handleOpenDocModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            title="Tuvale projeden doküman ekle"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Doküman</span>
           </button>
+
+          <div className="h-4 w-px bg-black/[0.08] dark:bg-white/[0.1] mx-0.5" />
 
           {/* Envanter Drawer Button */}
           <button

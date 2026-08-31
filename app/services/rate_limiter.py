@@ -1,11 +1,15 @@
+import logging
 import os
 import random
-import time
+import re
 import threading
-from typing import Callable, TypeVar, Any
-from openai import RateLimitError, APIError
+import time
+from typing import Any, Callable, TypeVar
+from openai import APIError, RateLimitError
 
+logger = logging.getLogger("rate_limiter")
 T = TypeVar("T")
+
 
 class GroqRateLimiter:
     """Groq API limitlerine (30 RPM, 8K TPM) uygun istek yöneticisi ve yeniden deneme katmanı."""
@@ -33,22 +37,17 @@ rate_limiter = GroqRateLimiter(min_interval_seconds=2.2)
 def execute_with_retry(
     call_fn: Callable[..., T],
     *args: Any,
-    max_retries: int = 5,
-    initial_backoff: float = 3.0,
+    max_retries: int = 12,
+    initial_backoff: float = 5.0,
+    max_wait_minutes: int = 10,
     **kwargs: Any,
 ) -> T:
-    """Groq API çağrısını rate limiter kuyruğuna sokar ve 429 / RateLimit durumunda exponential backoff ile yeniden dener.
-
-    Args:
-        call_fn: Çağrılacak fonksiyon (örn: client.chat.completions.create).
-        max_retries: Maksimum yeniden deneme sayısı.
-        initial_backoff: İlk bekleme süresi (saniye).
-
-    Returns:
-        T: Fonksiyonun dönüş değeri.
+    """Groq API çağrısını rate limiter kuyruğuna sokar ve 429 / RateLimit durumunda
+    sunucu önerisine veya exponential backoff'a göre bekleyip yeniden dener.
+    İşlem düşmez, rate limit süresince worker bekler ve isteği tamamlar.
     """
     retries = 0
-    backoff = initial_backoff
+    start_time = time.time()
 
     while True:
         # İstekler arası RPM koruması
@@ -67,12 +66,36 @@ def execute_with_retry(
                 or "tpm" in err_str
                 or "rpm" in err_str
             )
+            is_json_retryable = ("json_validate_failed" in err_str or "failed to validate json" in err_str) and retries < 3
 
-            if is_rate_limit and retries < max_retries:
+            if is_rate_limit:
+                elapsed = time.time() - start_time
+                if elapsed > max_wait_minutes * 60 or retries >= max_retries:
+                    logger.error(
+                        f"Rate limit: {max_wait_minutes} dakika sonunda ({retries} deneme) istek tamamlanamadı."
+                    )
+                    raise exc
+
                 retries += 1
-                # Exponential backoff + jitter (rastgele sapma)
-                jitter = random.uniform(0.5, 1.5)
-                sleep_duration = (backoff * (1.8 ** (retries - 1))) + jitter
+
+                # Hata mesajında "try again in X.XXs" var mı kontrol et
+                wait_match = re.search(r"try again in (\d+\.?\d*)\s*s", err_str)
+                if wait_match:
+                    suggested_wait = float(wait_match.group(1)) + 1.5
+                else:
+                    suggested_wait = initial_backoff * (1.5 ** (retries - 1)) + random.uniform(1.0, 3.0)
+
+                sleep_duration = max(suggested_wait, 6.0)
+                logger.warning(
+                    f"Rate limit'e takıldı (deneme {retries}/{max_retries}), "
+                    f"{sleep_duration:.1f}sn bekleniyor ve otomatik tekrar denenecek..."
+                )
+                time.sleep(sleep_duration)
+            elif is_json_retryable:
+                retries += 1
+                sleep_duration = 2.0 + random.uniform(0.5, 1.5)
+                logger.info(f"JSON doğrulama hatası alındı, {sleep_duration:.1f}sn sonra yeniden deneniyor (deneme {retries}/3)...")
                 time.sleep(sleep_duration)
             else:
                 raise exc
+

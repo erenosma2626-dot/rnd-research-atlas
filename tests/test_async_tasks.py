@@ -90,6 +90,55 @@ def test_async_process_document_success():
             asyncio.run(_async_process_document(doc_id, "/tmp/sample.pdf", project_id))
 
             mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "parsing")
+            mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "awaiting_plan_approval")
+            mock_doc_repo.update_plan_state.assert_called_once()
+
+
+def test_async_generate_final_report_success():
+    """_async_generate_final_report fonksiyonunun başarılı akışını test eder."""
+    from app.worker.tasks import _async_generate_final_report
+    doc_id = str(uuid4())
+
+    mock_filled_section = FilledSection(
+        group_id="core_summary",
+        title="Özet ve Katkı",
+        content_type="prose",
+        content={"text": "Özet içeriği."},
+        sources=[],
+    )
+
+    with patch("app.worker.tasks.fill_all_sections", return_value=[mock_filled_section]), \
+         patch("app.worker.tasks._get_worker_db_session") as mock_get_db:
+
+        mock_session = AsyncMock()
+        mock_factory = MagicMock()
+        mock_factory.return_value.__aenter__.return_value = mock_session
+        mock_engine = AsyncMock()
+        mock_get_db.return_value = (mock_engine, mock_factory)
+
+        with patch("app.worker.tasks.DocumentRepository") as mock_doc_repo_cls, \
+             patch("app.worker.tasks.ReportRepository") as mock_rep_repo_cls, \
+             patch("app.worker.tasks.SectionRepository") as mock_sec_repo_cls:
+
+            mock_doc_repo = AsyncMock()
+            mock_rep_repo = AsyncMock()
+            mock_sec_repo = AsyncMock()
+
+            mock_doc_repo_cls.return_value = mock_doc_repo
+            mock_rep_repo_cls.return_value = mock_rep_repo
+            mock_sec_repo_cls.return_value = mock_sec_repo
+
+            mock_doc = MagicMock()
+            mock_doc.plan_state = None
+            mock_doc_repo.get_by_id.return_value = mock_doc
+
+            mock_report_rec = MagicMock()
+            mock_report_rec.id = uuid4()
+            mock_rep_repo.create.return_value = mock_report_rec
+
+            asyncio.run(_async_generate_final_report(doc_id))
+
+            mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "generating_report")
             mock_doc_repo.update_status.assert_any_call(UUID(doc_id), "done")
             mock_sec_repo.create_many.assert_called_once()
 
@@ -97,7 +146,8 @@ def test_async_process_document_success():
 def test_process_document_task_celery():
     """process_document_task Celery görevinin senkron sarmalayıcısını test eder."""
     doc_id = str(uuid4())
+    proj_id = str(uuid4())
     with patch("app.worker.tasks._async_process_document") as mock_async_proc:
         mock_async_proc.return_value = None
-        process_document_task(doc_id, "/tmp/non_existent.pdf", "proj-1")
-        mock_async_proc.assert_called_once_with(doc_id, "/tmp/non_existent.pdf", "proj-1")
+        process_document_task(doc_id, "/tmp/sample.pdf", proj_id)
+        mock_async_proc.assert_called_once_with(doc_id, "/tmp/sample.pdf", proj_id)

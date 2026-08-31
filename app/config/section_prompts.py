@@ -9,6 +9,13 @@ LANGUAGE_INSTRUCTION = os.getenv(
     "cümlelerinin tamamı akıcı Türkçe olmalı)."
 )
 
+MATH_NOTATION_INSTRUCTION = (
+    "Herhangi bir matematiksel değişken, alt simge, üst simge, Yunan harfi "
+    "veya denklem geçiyorsa, MUTLAKA tek dolar işareti ile LaTeX formatında "
+    "yaz (örn. $x_i$, $\alpha$, $k^*$). Çıplak unicode matematik sembolü "
+    "(örn. 'Sαω' gibi) ASLA kullanma."
+)
+
 SECTION_PROMPTS = {
     "core_summary": {
         "content_type": "prose",
@@ -56,11 +63,18 @@ SECTION_PROMPTS = {
         ),
     },
     "system_architecture": {
-        "content_type": "prose",
+        "content_type": "module_list",
         "instruction": (
-            "Sistemin bileşenlerini ve aralarındaki veri akışını açıkla. "
-            "Bu section ayrıca bir diyagram için de kullanılacak, bu yüzden "
-            "bileşenleri net isimlerle ayır."
+            "Sistemin bileşenlerini/modüllerini SIRAYLA listele. Her modül için: "
+            "1) modülün adı (varsa orijinal İngilizce adını short_label'a koy), "
+            "2) o modülün ne yaptığını 1-2 cümlede açıkla. "
+            "Matematiksel değişken/ifade geçiyorsa (örn. alt simge, üst simge, "
+            "Yunan harfi, denklem referansı) MUTLAKA tek dolar işaretiyle "
+            "LaTeX formatında yaz, örn: $S_{\alpha\omega}(x_i)$, $k^*$, $C_m$. "
+            "Düz metin içinde alt simge/üst simge/Yunan harfi ASLA çıplak "
+            "unicode olarak yazma (örn. 'Sαω(x_i)' YANLIŞ, '$S_{\alpha\omega}(x_i)$' DOĞRU). "
+            "Ayrıca modüller arası veri akışını tek satırlık bir özet olarak "
+            "flow_summary alanına yaz (örn. 'IN → Noise Processing → ... → OUT')."
         ),
     },
     "survey_taxonomy": {
@@ -103,8 +117,8 @@ SECTION_PROMPTS = {
 
 
 def build_prompt(group_id: str) -> str:
-    """Belirtilen group_id için dil talimatıyla zenginleştirilmiş sistem promptunu üretir."""
-    prompt_config = SECTION_PROMPTS.get(group_id)
-    if not prompt_config:
-        return f"{LANGUAGE_INSTRUCTION}\n\nBu bölüm için makaleden ilgili bilgileri özetle."
-    return f"{LANGUAGE_INSTRUCTION}\n\n{prompt_config['instruction']}"
+    """Merkezi prompt oluşturucu: Dil ve Matematik kurallarını tüm promptlara enjekte eder."""
+    raw = SECTION_PROMPTS.get(group_id, {}).get("instruction", "")
+    if not raw:
+        return f"{LANGUAGE_INSTRUCTION}\n\n{MATH_NOTATION_INSTRUCTION}\n\nBu bölüm için makaleden ilgili bilgileri özetle."
+    return f"{raw}\n\n{LANGUAGE_INSTRUCTION}\n\n{MATH_NOTATION_INSTRUCTION}"

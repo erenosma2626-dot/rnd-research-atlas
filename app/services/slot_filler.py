@@ -2,13 +2,18 @@ import logging
 from typing import Any, Optional
 from pydantic import BaseModel, Field
 
-from app.config.section_prompts import SECTION_PROMPTS, build_prompt
+from app.config.section_prompts import (
+    LANGUAGE_INSTRUCTION,
+    MATH_NOTATION_INSTRUCTION,
+    SECTION_PROMPTS,
+    build_prompt,
+)
 from app.models.chart_data import ChartData, ChartSeries
 from app.models.document import ParsedDocument
 from app.models.figure import ExtractedFigure
 from app.models.formula import ExtractedFormula
 from app.models.paper_profile import PaperProfile
-from app.models.report_section import FilledSection, SourceReference
+from app.models.report_section import FilledSection, ModuleListContent, SourceReference
 from app.models.routing import ActiveSectionGroup
 from app.services.classifier import LLMCallLog, get_instructor_client, log_llm_call
 from app.services.rate_limiter import execute_with_retry
@@ -16,6 +21,76 @@ from app.services.vector_store import query_document
 from app.storage.object_store import get_presigned_url
 
 logger = logging.getLogger("slot_filler")
+
+
+MAX_TOKENS_BY_GROUP = {
+    "ml_experiment_table": 2500,
+    "survey_taxonomy": 2000,
+    "ablation_study": 2000,
+    "core_summary": 1200,
+    "method_steps": 1200,
+    "system_architecture": 1800,
+    "optimization_formulation": 1500,
+    "decision_tree": 1500,
+    "theorem_proofs": 1500,
+    "quantitative_results": 2000,
+    "limitations_future": 1200,
+}
+
+
+def call_llm_structured(
+    prompt: str,
+    response_model: type[BaseModel],
+    system_prompt: Optional[str] = None,
+    group_id: Optional[str] = None,
+    max_tokens: Optional[int] = None,
+    temperature: float = 0.1,
+    call_type: str = "slot_fill",
+) -> BaseModel:
+    """TÜM structured-output LLM çağrılarının geçtiği merkezi gateway.
+
+    Dil zorunluluğu (Türkçe) ve LaTeX notasyon kuralları burada otomatik
+    olarak her prompt'un başına eklenir; token limiti grup bazında belirlenir.
+    """
+    client, model_name = get_instructor_client()
+
+    full_prompt = (
+        f"{LANGUAGE_INSTRUCTION}\n\n"
+        f"{MATH_NOTATION_INSTRUCTION}\n\n"
+        f"{prompt}"
+    )
+
+    sys_prompt = system_prompt or (
+        "You are an expert scientific paper analyzer. Your job is to extract and generate "
+        "accurate, highly technical, and concise report sections STRICTLY IN TURKISH. "
+        "Adhere to the requested structured schema, output valid Turkish text with LaTeX $...$ math expressions."
+    )
+
+    tokens = max_tokens or (MAX_TOKENS_BY_GROUP.get(group_id, 1600) if group_id else 1600)
+
+    result = execute_with_retry(
+        client.chat.completions.create,
+        model=model_name,
+        response_model=response_model,
+        messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": full_prompt},
+        ],
+        temperature=temperature,
+        max_tokens=tokens,
+        max_retries=5,
+    )
+
+    log_llm_call(
+        LLMCallLog(
+            call_type=call_type,
+            model=model_name,
+            input_tokens=0,
+            output_tokens=0,
+        )
+    )
+
+    return result
 
 
 class ProseContent(BaseModel):
@@ -58,6 +133,8 @@ def get_response_model_for_type(content_type: str) -> type[BaseModel]:
         return TableContent
     elif content_type == "list":
         return ListContent
+    elif content_type == "module_list":
+        return ModuleListContent
     elif content_type == "chart":
         return ChartData
     elif content_type == "image_gallery":
@@ -99,21 +176,20 @@ def fill_paper_figures_section(figures: list[ExtractedFigure], document_id: str)
 def extract_chart_data(
     document_id: str,
     retrieved_chunks: list[dict[str, Any]],
-    parsed_doc: ParsedDocument,
+    parsed_doc: Optional[ParsedDocument] = None,
 ) -> Optional[ChartData]:
     """Retrieval sonuçlarından sayısal karşılaştırma verilerini çıkararak ChartData üretir.
 
     Eğer makalede anlamlı sayısal veri yoksa None döner (halüsinasyon engelleme).
     """
     context_text = "\n\n".join(c["content"] for c in retrieved_chunks)
-    if not context_text:
+    if not context_text and parsed_doc:
         context_text = parsed_doc.raw_markdown[:5000]
 
-    client, model_name = get_instructor_client()
     system_prompt = (
         "You are an expert scientific data extractor. Extract quantitative evaluation results "
         "(models/methods, benchmark metrics, F1/RMSE/Accuracy/Loss values) from the text. "
-        "Strictly return structured ChartData with real numbers found in the text. "
+        "Strictly return structured ChartData with real numbers found in the text in TURKISH. "
         "If there are no clear quantitative comparison tables or numbers, return empty series."
     )
     user_prompt = (
@@ -122,16 +198,12 @@ def extract_chart_data(
     )
 
     try:
-        raw_result = execute_with_retry(
-            client.chat.completions.create,
-            model=model_name,
+        raw_result = call_llm_structured(
+            prompt=user_prompt,
             response_model=ChartData,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.1,
-            max_retries=3,
+            system_prompt=system_prompt,
+            group_id="quantitative_results",
+            call_type="chart_data_extract",
         )
         # Eğer anlamlı seri ve etiket yoksa grafik üretme
         if not raw_result.series or not raw_result.x_labels or len(raw_result.series) == 0:
@@ -149,7 +221,7 @@ def extract_chart_data(
 def fill_section(
     document_id: str,
     group: ActiveSectionGroup,
-    parsed_doc: ParsedDocument,
+    parsed_doc: Optional[ParsedDocument] = None,
     extracted_formulas: Optional[list[ExtractedFormula]] = None,
     paper_profile: Optional[PaperProfile] = None,
 ) -> FilledSection:
@@ -189,7 +261,7 @@ def fill_section(
 
     # Eğer retrieval boş döndüyse fallback olarak doküman özetini kullan
     if not context_blocks:
-        context_text = parsed_doc.raw_markdown[:4000]
+        context_text = parsed_doc.raw_markdown[:4000] if parsed_doc else f"{group.title} bölüm içeriği."
         sources.append(SourceReference(page=1, section_title="Document Overview"))
     else:
         context_text = "\n\n---\n\n".join(context_blocks)
@@ -228,42 +300,20 @@ def fill_section(
 
     response_model = get_response_model_for_type(content_type)
 
-    # 2. LLM Call
-    client, model_name = get_instructor_client()
-    system_prompt = (
-        "You are an expert scientific paper analyzer. Your job is to extract and generate "
-        "accurate, highly technical, and concise report sections in TURKISH from the provided document context. "
-        "Strictly adhere to the requested output schema and Turkish language instructions."
-    )
-
     user_prompt = (
         f"SECTION TITLE: {group.title}\n"
         f"INSTRUCTION: {instruction}\n\n"
         f"DOCUMENT RELEVANT CONTEXT:\n{context_text}\n"
         f"{formula_context}\n"
-        f"Generate the exact structured content for this section."
+        f"Generate the exact structured content for this section in TURKISH."
     )
 
     try:
-        raw_result = execute_with_retry(
-            client.chat.completions.create,
-            model=model_name,
+        raw_result = call_llm_structured(
+            prompt=user_prompt,
             response_model=response_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.1,
-            max_retries=5,
-        )
-
-        log_llm_call(
-            LLMCallLog(
-                call_type="slot_fill",
-                model=model_name,
-                input_tokens=0,
-                output_tokens=0,
-            )
+            group_id=group.group_id,
+            call_type="slot_fill",
         )
 
         content_dict = raw_result.model_dump()
@@ -275,11 +325,15 @@ def fill_section(
             sources=sources,
         )
     except Exception as e:
+        logger.error(f"Section {group.group_id} generation failed: {e}")
         return FilledSection(
             group_id=group.group_id,
             title=group.title,
             content_type="error",
-            content={"error": f"Bölüm içeriği üretilirken hata oluştu: {str(e)}"},
+            content={
+                "message": "Bu bölüm oluşturulurken bir hata oluştu. Lütfen yeniden deneyin.",
+                "error_details": str(e),
+            },
             sources=sources,
         )
 
@@ -287,7 +341,7 @@ def fill_section(
 def fill_all_sections(
     document_id: str,
     active_groups: list[ActiveSectionGroup],
-    parsed_doc: ParsedDocument,
+    parsed_doc: Optional[ParsedDocument] = None,
     extracted_formulas: Optional[list[ExtractedFormula]] = None,
     paper_profile: Optional[PaperProfile] = None,
 ) -> list[FilledSection]:
@@ -295,7 +349,7 @@ def fill_all_sections(
     filled_sections: list[FilledSection] = []
 
     # 1. Makale Görselleri (Varsa doğrudan ekle)
-    if hasattr(parsed_doc, "figures") and parsed_doc.figures:
+    if parsed_doc and hasattr(parsed_doc, "figures") and parsed_doc.figures:
         figures_section = fill_paper_figures_section(parsed_doc.figures, document_id)
         filled_sections.append(figures_section)
 

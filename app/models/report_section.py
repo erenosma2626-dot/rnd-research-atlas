@@ -14,16 +14,35 @@ class SourceReference(BaseModel):
     section_title: str = Field(..., description="Kaynak bölüm başlığı")
 
 
+class ModuleItem(BaseModel):
+    """Sistem mimarisi ve bileşen adımları için yapısal modül nesnesi."""
+
+    order: int = Field(..., description="Modülün sırası (1, 2, ...)")
+    name: str = Field(..., description="Modülün Türkçe adı")
+    short_label: Optional[str] = Field(default=None, description="Modülün orijinal İngilizce veya kısa etiketi")
+    description: str = Field(..., description="Modülün görevi ve çalışma mantığı (LaTeX $...$ destekli)")
+
+
+class ModuleListContent(BaseModel):
+    """Module list içerik gövdesi."""
+
+    modules: list[ModuleItem] = Field(default_factory=list)
+    flow_summary: Optional[str] = Field(default=None, description="Modüller arası veri akışı özeti")
+
+
 class FilledSection(BaseModel):
     """Doldurulmuş rapor bölümü nesnesi."""
 
     group_id: str = Field(..., description="Bölüm grubu kimliği (örn: 'ml_experiment_table')")
     title: str = Field(..., description="Bölüm grubu başlığı")
     content_type: str = Field(
-        ..., description="İçerik türü ('prose' | 'table' | 'list' | 'error')"
+        ..., description="İçerik türü ('prose' | 'table' | 'list' | 'module_list' | 'image_gallery' | 'chart' | 'error')"
     )
     content: dict[str, Any] = Field(
-        ..., description="Yapılandırılmış içerik (prose: text, table: columns/rows, list: items)"
+        ..., description="Yapılandırılmış içerik (prose: text, table: columns/rows, list: items, module_list: modules/flow_summary)"
+    )
+    diagram: Optional[dict[str, Any]] = Field(
+        default=None, description="Bu bölüme eklenmiş diyagram nesnesi"
     )
     sources: list[SourceReference] = Field(
         default_factory=list, description="İçeriğin çekildiği kaynak referansları"
@@ -31,6 +50,11 @@ class FilledSection(BaseModel):
     diagram_requested: bool = Field(
         default=False, description="Kullanıcının bu bölüm için diyagram üretimi talep edip etmediği"
     )
+
+    @property
+    def section_id(self) -> str:
+        return self.group_id
+
 
 
 class GenerateReportRequest(BaseModel):

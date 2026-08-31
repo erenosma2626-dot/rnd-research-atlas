@@ -4,18 +4,21 @@ SECTION_GROUPS = [
     {
         "group_id": "core_summary",
         "title": "Özet ve Katkı",
+        "planning_description": "Makalenin ana amacı, temel katkıları ve genel özeti 2-3 paragrafta açıklanacak.",
         "always_active": True,  # Her makalede olur, flag gerektirmez
         "trigger_flags": [],
     },
     {
         "group_id": "method_steps",
         "title": "Yöntem",
+        "planning_description": "Önerilen metodoloji ve yaklaşım adımları sıralı ve net maddeler halinde listelenecek.",
         "always_active": True,
         "trigger_flags": [],
     },
     {
         "group_id": "ml_experiment_table",
         "title": "Veri & Yöntem (ML)",
+        "planning_description": "Kullanılan veri seti, ön işleme adımları, modeller, hiperparametreler ve metrikleri özetleyen bir tablo oluşturulacak.",
         "always_active": False,
         "trigger_flags": [
             "has_dataset",
@@ -30,6 +33,7 @@ SECTION_GROUPS = [
     {
         "group_id": "quantitative_results",
         "title": "Sayısal Sonuçlar & Grafik",
+        "planning_description": "Modeller/yöntemler arası karşılaştırmalı sayısal performans metrikleri görsel bir grafik ve tabloyla sunulacak.",
         "always_active": False,
         "trigger_flags": ["has_evaluation_metrics", "has_baseline_comparison"],
         "trigger_mode": "any",
@@ -37,6 +41,7 @@ SECTION_GROUPS = [
     {
         "group_id": "paper_figures",
         "title": "Makale Görselleri & Şemalar",
+        "planning_description": "PDF içerisinden ayıklanan orijinal şekiller, şemalar, mimari görseller ve grafikler galeri halinde eklenecek.",
         "always_active": False,
         "trigger_flags": ["has_extractable_figures"],
         "trigger_mode": "any",
@@ -44,6 +49,7 @@ SECTION_GROUPS = [
     {
         "group_id": "decision_tree",
         "title": "Karar Ağacı / Seçim Rehberi",
+        "planning_description": "Problem türüne veya kullanım senaryosuna göre yöntem seçim adımları karar ağacı formatında listelenecek.",
         "always_active": False,
         "trigger_flags": ["has_decision_workflow"],
         "trigger_mode": "any",
@@ -51,6 +57,7 @@ SECTION_GROUPS = [
     {
         "group_id": "theorem_proofs",
         "title": "Teoremler",
+        "planning_description": "Makaledeki teorik ifadeler, teoremler, lemmalar ve ispat stratejileri özetlenecek.",
         "always_active": False,
         "trigger_flags": ["has_theorem_proof"],
         "trigger_mode": "any",
@@ -58,6 +65,7 @@ SECTION_GROUPS = [
     {
         "group_id": "optimization_formulation",
         "title": "Optimizasyon Formülasyonu",
+        "planning_description": "Amaç fonksiyonu (objective function), kısıtlar ve matematiksel optimizasyon formülleri LaTeX formatında çıkarılacak.",
         "always_active": False,
         "trigger_flags": ["has_optimization_formulation"],
         "trigger_mode": "any",
@@ -65,6 +73,7 @@ SECTION_GROUPS = [
     {
         "group_id": "algorithm_section",
         "title": "Algoritma",
+        "planning_description": "Algoritmanın pseudocode adımları, çalışma mantığı ve zaman/uzay karmaşıklık analizi listelenecek.",
         "always_active": False,
         "trigger_flags": ["has_algorithm_pseudocode", "has_complexity_analysis"],
         "trigger_mode": "any",
@@ -72,6 +81,7 @@ SECTION_GROUPS = [
     {
         "group_id": "system_architecture",
         "title": "Sistem Mimarisi",
+        "planning_description": "Sistemin bileşenleri, sıralı modülleri ve aralarındaki veri akışı stepper modül listesi olarak yapılandırılacak.",
         "always_active": False,
         "trigger_flags": ["has_system_architecture"],
         "trigger_mode": "any",
@@ -79,6 +89,7 @@ SECTION_GROUPS = [
     {
         "group_id": "survey_taxonomy",
         "title": "Taksonomi / Karşılaştırma",
+        "planning_description": "Literatürdeki mevcut yaklaşımlar, güçlü ve zayıf yönleri karşılaştırmalı taksonomi tablosunda özetlenecek.",
         "always_active": False,
         "trigger_flags": ["has_survey_structure"],
         "trigger_mode": "any",
@@ -86,6 +97,7 @@ SECTION_GROUPS = [
     {
         "group_id": "ablation_study",
         "title": "Ablation Çalışması",
+        "planning_description": "Bileşenlerin modele etkisini inceleyen ablation test sonuçları ve performans değişimleri tablolandırılacak.",
         "always_active": False,
         "trigger_flags": ["has_ablation_study"],
         "trigger_mode": "any",
@@ -93,8 +105,12 @@ SECTION_GROUPS = [
     {
         "group_id": "limitations_future",
         "title": "Sınırlamalar ve Gelecek Çalışmalar",
+        "planning_description": "Yöntemin bilinen kısıtları, varsayımları ve yazarların önerdiği gelecek araştırma yönleri listelenecek.",
         "always_active": False,
         "trigger_flags": ["has_limitations_section", "has_future_work"],
         "trigger_mode": "any",
     },
 ]
+
+SECTION_GROUPS_BY_ID = {group["group_id"]: group for group in SECTION_GROUPS}
+

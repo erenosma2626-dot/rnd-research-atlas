@@ -406,6 +406,7 @@ async def get_document_report(
                 title=s.title,
                 content_type=s.section_type,
                 content=content,
+                diagram=s.diagram,
                 sources=sources,
                 diagram_requested=s.diagram is not None,
             )

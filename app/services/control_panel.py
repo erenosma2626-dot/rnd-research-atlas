@@ -1,6 +1,7 @@
 from typing import Optional
 from app.config.diagram_eligibility import DIAGRAM_ELIGIBLE_GROUPS
 from app.models.report_section import FilledSection
+from app.models.routing import ActiveSectionGroup
 from app.models.section_candidate import ControlPanelState, SectionCandidate
 
 
@@ -44,6 +45,41 @@ def generate_content_preview(filled_section: FilledSection) -> str:
     else:
         raw_str = str(content).strip()
         return raw_str[:147] + "..." if len(raw_str) > 150 else raw_str
+
+
+def build_plan_candidates(active_groups: list[ActiveSectionGroup]) -> list[SectionCandidate]:
+    """Planlama sayfası için henüz içerik üretilmeden aday bölümleri konfigürasyondan türetir."""
+    from app.config.section_schema import SECTION_GROUPS_BY_ID
+    from app.config.diagram_eligibility import is_diagram_eligible
+
+    candidates: list[SectionCandidate] = []
+    for idx, group in enumerate(active_groups):
+        schema_info = SECTION_GROUPS_BY_ID.get(
+            group.group_id,
+            {
+                "title": group.title,
+                "planning_description": f"{group.title} bölümü bu makalede tespit edildi.",
+            },
+        )
+        diag_eligible = is_diagram_eligible(group.group_id)
+        sec_title = schema_info.get("title", group.title)
+        candidates.append(
+            SectionCandidate(
+                section_id=group.group_id,
+                section_title=sec_title,
+                title=sec_title,
+                detected=True,
+                included=True,
+                order=idx + 1,
+                diagram_available=diag_eligible,
+                diagram_included=diag_eligible,
+                content_preview=schema_info.get(
+                    "planning_description",
+                    f"{sec_title} bölümü bu makalede tespit edildi.",
+                ),
+            )
+        )
+    return candidates
 
 
 def build_control_panel_state(

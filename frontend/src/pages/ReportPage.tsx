@@ -27,6 +27,7 @@ interface ReportPageProps {
   filename?: string;
   onNavigateHome: () => void;
   onNavigateUpload: () => void;
+  onNavigatePlan?: (documentId: string) => void;
 }
 
 export const ReportPage: React.FC<ReportPageProps> = ({
@@ -34,6 +35,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
   filename,
   onNavigateHome,
   onNavigateUpload,
+  onNavigatePlan,
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const { status, errorMessage, filename: polledFilename } = usePollDocumentStatus(documentId, 2000);
@@ -52,11 +54,20 @@ export const ReportPage: React.FC<ReportPageProps> = ({
     if (idx !== -1) return idx;
     if (currentStatus === 'pending') return 0;
     if (currentStatus === 'processing') return 1;
+    if (currentStatus === 'awaiting_plan_approval') return 4;
+    if (currentStatus === 'generating_report') return 4;
     if (currentStatus === 'done') return 5;
     return 0;
   };
 
   const currentStageIndex = getStageIndex(status);
+
+  // Eğer durum awaiting_plan_approval ise otomatik Planlama sayfasına yönlendir
+  useEffect(() => {
+    if (status === 'awaiting_plan_approval' && onNavigatePlan) {
+      onNavigatePlan(documentId);
+    }
+  }, [status, documentId, onNavigatePlan]);
 
   useEffect(() => {
     if (status === 'done' && !paperProfile && !loadingReport) {
@@ -324,6 +335,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
               ? (s.content.text || JSON.stringify(s.content))
               : String(s.content || '');
             return {
+              section_id: s.group_id,
               group_id: s.group_id,
               title: s.title,
               content_preview: previewText.slice(0, 80),

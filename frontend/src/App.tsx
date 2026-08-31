@@ -5,6 +5,7 @@ import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import { CanvasPage } from './pages/CanvasPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
+import { PlanningPage } from './pages/PlanningPage';
 import { ProjectListPage } from './pages/ProjectListPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
@@ -32,7 +33,7 @@ function AuthenticatedApp() {
   });
 
   const [currentView, setCurrentView] = useState<
-    'project_list' | 'project' | 'settings' | 'upload' | 'report' | 'canvas' | 'accept_invite'
+    'project_list' | 'project' | 'settings' | 'upload' | 'report' | 'plan' | 'canvas' | 'accept_invite'
   >(() => (inviteToken ? 'accept_invite' : 'project_list'));
 
   const [activeProjectId, setActiveProjectId] = useState<string>(DEFAULT_PROJECT_ID);
@@ -207,6 +208,21 @@ function AuthenticatedApp() {
           filename={activeFilename}
           onNavigateHome={handleNavigateHome}
           onNavigateUpload={handleNavigateUpload}
+          onNavigatePlan={(docId) => {
+            setActiveDocumentId(docId);
+            setCurrentView('plan');
+          }}
+        />
+      )}
+
+      {currentView === 'plan' && activeDocumentId && (
+        <PlanningPage
+          documentId={activeDocumentId}
+          onNavigateBack={handleNavigateHome}
+          onPlanApproved={(docId) => {
+            setActiveDocumentId(docId);
+            setCurrentView('report');
+          }}
         />
       )}
 

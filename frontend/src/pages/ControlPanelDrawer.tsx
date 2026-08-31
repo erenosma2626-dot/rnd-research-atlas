@@ -36,8 +36,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
   onToggleInclude,
   onToggleDiagram,
 }) => {
+  const candidateId = candidate.section_id || candidate.group_id || '';
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: candidate.group_id,
+    id: candidateId,
   });
 
   const style = {
@@ -68,7 +69,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
       {/* Include Checkbox */}
       <button
-        onClick={() => onToggleInclude(candidate.group_id)}
+        onClick={() => onToggleInclude(candidateId)}
         className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
           candidate.included ? 'bg-accent text-white' : 'border border-border-light dark:border-border-dark text-transparent'
         }`}
@@ -81,10 +82,10 @@ const SortableItem: React.FC<SortableItemProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
-            {candidate.title}
+            {candidate.title || candidate.section_title}
           </span>
           <span className="text-[10px] text-text-secondary-light dark:text-text-secondary-dark font-mono truncate">
-            ({candidate.group_id})
+            ({candidateId})
           </span>
         </div>
         <p className="text-[11px] text-text-secondary-light dark:text-text-secondary-dark truncate mt-0.5">
@@ -93,9 +94,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
       </div>
 
       {/* Diagram Toggle (if eligible) */}
-      {candidate.diagram_eligible && (
+      {(candidate.diagram_eligible || candidate.diagram_available) && (
         <button
-          onClick={() => onToggleDiagram(candidate.group_id)}
+          onClick={() => onToggleDiagram(candidateId)}
           disabled={!candidate.included}
           className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border transition-all ${
             candidate.diagram_included && candidate.included
@@ -143,8 +144,8 @@ export const ControlPanelDrawer: React.FC<ControlPanelDrawerProps> = ({
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setCandidates((items) => {
-        const oldIndex = items.findIndex((item) => item.group_id === active.id);
-        const newIndex = items.findIndex((item) => item.group_id === over.id);
+        const oldIndex = items.findIndex((item) => (item.section_id || item.group_id) === active.id);
+        const newIndex = items.findIndex((item) => (item.section_id || item.group_id) === over.id);
         const reordered = arrayMove(items, oldIndex, newIndex);
         return reordered.map((item, idx) => ({ ...item, order: idx + 1 }));
       });
@@ -153,13 +154,13 @@ export const ControlPanelDrawer: React.FC<ControlPanelDrawerProps> = ({
 
   const handleToggleInclude = (id: string) => {
     setCandidates((prev) =>
-      prev.map((c) => (c.group_id === id ? { ...c, included: !c.included } : c))
+      prev.map((c) => ((c.section_id || c.group_id) === id ? { ...c, included: !c.included } : c))
     );
   };
 
   const handleToggleDiagram = (id: string) => {
     setCandidates((prev) =>
-      prev.map((c) => (c.group_id === id ? { ...c, diagram_included: !c.diagram_included } : c))
+      prev.map((c) => ((c.section_id || c.group_id) === id ? { ...c, diagram_included: !c.diagram_included } : c))
     );
   };
 
@@ -210,16 +211,19 @@ export const ControlPanelDrawer: React.FC<ControlPanelDrawerProps> = ({
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={candidates.map((c) => c.group_id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={candidates.map((c) => c.section_id || c.group_id || '')} strategy={verticalListSortingStrategy}>
               <div className="space-y-2.5">
-                {candidates.map((candidate) => (
-                  <SortableItem
-                    key={candidate.group_id}
-                    candidate={candidate}
-                    onToggleInclude={handleToggleInclude}
-                    onToggleDiagram={handleToggleDiagram}
-                  />
-                ))}
+                {candidates.map((candidate) => {
+                  const cId = candidate.section_id || candidate.group_id || '';
+                  return (
+                    <SortableItem
+                      key={cId}
+                      candidate={candidate}
+                      onToggleInclude={handleToggleInclude}
+                      onToggleDiagram={handleToggleDiagram}
+                    />
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>

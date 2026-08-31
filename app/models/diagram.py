@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 from app.models.report_section import FilledSection
 
@@ -34,8 +34,16 @@ class GeneratedDiagram(BaseModel):
     """Nihai Mermaid kodu ve ham spesifikasyonu içeren üretilmiş diyagram nesnesi."""
 
     section_id: str = Field(..., description="Diyagramın ait olduğu bölümün group_id değeri")
+    group_id: Optional[str] = Field(default=None, description="Bölüm grubu kimliği takma adı")
     mermaid_code: str = Field(..., description="Render edilmeye hazır deterministik Mermaid.js kodu")
     spec: DiagramSpec = Field(..., description="Ham JSON graf özellikleri")
+
+    def __init__(self, **data: Any):
+        if "group_id" in data and "section_id" not in data:
+            data["section_id"] = data["group_id"]
+        super().__init__(**data)
+        if not self.group_id:
+            self.group_id = self.section_id
 
 
 class GenerateDiagramRequest(BaseModel):

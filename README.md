@@ -26,85 +26,59 @@ Bu repo **Faz 1 Analiz Motoru ve Web Arayüzünün** (Step 1-9), **Faz 2 Kalıc�
 
 ---
 
-## 🚀 Kurulum
+## 🚀 Kurulum ve Çalıştırma
 
-### 1. Docker ile Servisleri Başlatma (Postgres, MinIO, Redis)
+### Yöntem 1: Docker Compose ile Tek Komutla Çalıştırma (Önerilen)
+
+Tüm servisleri (PostgreSQL, MinIO, Redis, FastAPI Backend, Celery Worker ve React Frontend) tek bir komutla ayağa kaldırabilirsiniz:
+
 ```bash
-docker compose up -d
-```
-- **PostgreSQL:** `localhost:5432`
-- **MinIO S3:** `localhost:9000` | **MinIO Panel:** `http://localhost:9001` (Kullanıcı: `devadmin`, Şifre: `devpassword123`)
-- **Redis:** `localhost:6379`
-
-### 2. Backend Kurulumu & Migration
-```bash
-# Sanal ortam oluşturma ve aktifleştirme
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Bağımlılıkları yükleme
-pip install -r requirements.txt
-
-# Veritabanı tablolarını oluşturma / güncelleme
-alembic upgrade head
-
-# Ortam değişkenlerini yapılandırma
+# 1. Ortam değişkenlerini yapılandırın
 cp .env.example .env
+# .env dosyanıza GROQ_API_KEY ve Supabase anahtarlarınızı girin
+
+# 2. Tüm servisleri container içinde başlatın
+docker compose up
+# (Arka planda çalıştırmak için: docker compose up -d)
+
+# 3. İlk kurulumda veya yeni migration geldiğinde veritabanı tablolarını güncelleyin:
+docker compose exec backend alembic upgrade head
 ```
 
-`.env` dosyanıza kendi anahtarlarınızı ekleyin:
-```env
-GROQ_API_KEY=gsk_...
-GROQ_CLASSIFY_MODEL=openai/gpt-oss-20b
-GROQ_CHAT_MODEL=openai/gpt-oss-20b
-GROQ_DIAGRAM_MODEL=openai/gpt-oss-20b
-GROQ_FORMULA_MODEL=openai/gpt-oss-20b
-FORMULA_MODE=hybrid
-DATABASE_URL=postgresql+asyncpg://postgres:devpassword@localhost:5432/rnd_paper_canvas
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=devadmin
-MINIO_SECRET_KEY=devpassword123
-MINIO_BUCKET=documents
-MINIO_SECURE=false
-REDIS_URL=redis://localhost:6379/0
-SUPABASE_JWT_SECRET=your_supabase_jwt_secret
-```
-
-### 3. Frontend Kurulumu
-```bash
-cd frontend
-npm install
-cp .env.example .env
-```
-
-`frontend/.env` dosyanıza Supabase proje bilgilerinizi ekleyin:
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key
-```
+- **Web Arayüzü (React + Vite):** `http://localhost:5173`
+- **Backend Swagger API Docs:** `http://localhost:8000/docs`
+- **MinIO Dashboard:** `http://localhost:9001` (Kullanıcı: `devadmin`, Şifre: `devpassword123`)
 
 ---
 
-## 💻 Çalıştırma
+### Yöntem 2: Manuel / Yerel Geliştirme Ortamı (Opsiyonel)
 
-### 1. Backend API Sunucusunu Başlatma (Terminal 1)
+#### 1. Sadece Altyapı Servislerini Başlatma (Postgres, MinIO, Redis)
 ```bash
-uvicorn app.main:app --reload --port 8000
+docker compose up -d postgres minio redis
 ```
-- **Swagger Dokümantasyonu:** `http://127.0.0.1:8000/docs`
 
-### 2. Celery Arka Plan Worker'ını Başlatma (Terminal 2)
+#### 2. Backend & Celery Kurulumu
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+
+# Terminal 1 - Backend API:
+uvicorn app.main:app --reload --port 8000
+
+# Terminal 2 - Celery Worker:
 celery -A app.worker.celery_app worker --loglevel=info
 ```
 
-### 3. Frontend Geliştirme Sunucusunu Başlatma (Terminal 3)
+#### 3. Frontend Kurulumu
 ```bash
 cd frontend
+npm install
+# Terminal 3 - Web Arayüzü:
 npm run dev
 ```
-- **Web Arayüzü:** `http://localhost:5173`
 
 ---
 

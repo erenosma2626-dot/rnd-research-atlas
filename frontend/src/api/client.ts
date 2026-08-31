@@ -49,7 +49,7 @@ export interface GeneratedDiagram {
 export interface FilledSection {
   group_id: string;
   title: string;
-  content_type: 'prose' | 'table' | 'list' | 'image_gallery' | 'chart' | 'error';
+  content_type: 'prose' | 'table' | 'list' | 'module_list' | 'image_gallery' | 'chart' | 'error';
   content: Record<string, any>;
   sources: SourceReference[];
   diagram_requested: boolean;
@@ -141,12 +141,15 @@ export interface ChatResponse {
 }
 
 export interface SectionCandidate {
-  group_id: string;
+  section_id: string;
+  group_id?: string;
   title: string;
-  content_preview: string;
+  section_title?: string;
+  content_preview?: string;
   included: boolean;
   order: number;
-  diagram_eligible: boolean;
+  diagram_available?: boolean;
+  diagram_eligible?: boolean;
   diagram_included: boolean;
 }
 
@@ -490,6 +493,7 @@ export async function addCanvasItem(
   refId?: string | null,
   content?: Record<string, any> | null
 ): Promise<CanvasItemData> {
+  const isUUID = refId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(refId);
   const res = await authFetch(`${API_BASE_URL}/canvases/${canvasId}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -497,12 +501,13 @@ export async function addCanvasItem(
       item_type: itemType,
       position_x: positionX,
       position_y: positionY,
-      ref_id: refId,
+      ref_id: isUUID ? refId : null,
       content,
     }),
   });
   if (!res.ok) {
-    throw new Error('Canvas elemanı eklenemedi');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || 'Canvas elemanı eklenemedi');
   }
   return res.json();
 }
@@ -687,4 +692,56 @@ export async function deleteReportSection(sectionId: string): Promise<void> {
     throw new Error(err.detail || 'Bölüm silinemedi');
   }
 }
+
+// 27. Ön-Üretim Plan Şemaları & API'leri
+export interface FigureCandidate {
+  figure_id: string;
+  caption?: string | null;
+  image_url: string;
+  included: boolean;
+  order: number;
+}
+
+export interface PlanState {
+  document_id: string;
+  active_sections: SectionCandidate[];
+  extracted_figures: FigureCandidate[];
+  paper_profile?: Record<string, any>;
+}
+
+export async function getDocumentPlan(documentId: string): Promise<PlanState> {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/plan`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Plan yüklenemedi' }));
+    throw new Error(err.detail || 'Plan yüklenemedi');
+  }
+  return res.json();
+}
+
+export async function updateDocumentPlan(documentId: string, planState: PlanState): Promise<PlanState> {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/plan`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(planState),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Plan güncellenemedi' }));
+    throw new Error(err.detail || 'Plan güncellenemedi');
+  }
+  return res.json();
+}
+
+export async function approveDocumentPlan(documentId: string, planState?: PlanState): Promise<{ status: string; document_id: string }> {
+  const res = await authFetch(`${API_BASE_URL}/documents/${documentId}/plan/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan_state: planState || null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Plan onaylanamadı' }));
+    throw new Error(err.detail || 'Plan onaylanamadı');
+  }
+  return res.json();
+}
+
 

@@ -32,8 +32,11 @@ def extract_figures(pdf_path: str, document_id: str) -> list[ExtractedFigure]:
     extracted_figures: list[ExtractedFigure] = []
 
     try:
-        # PyMuPDF (fitz) ile PDF sayfalarındaki gömülü görselleri hızlıca çek
-        import fitz  # PyMuPDF
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
+        import re
 
         doc = fitz.open(pdf_path)
         for page_idx in range(len(doc)):
@@ -41,9 +44,14 @@ def extract_figures(pdf_path: str, document_id: str) -> list[ExtractedFigure]:
             page_num = page_idx + 1
             image_list = page.get_images(full=True)
 
-            # Sayfadaki metinden "Fig" veya "Figure" başlığını yakalamaya çalış
+            # Sayfadaki metinden figür/tablo başlıklarını regex ile yakala
             page_text = page.get_text("text")
-            captions = [line.strip() for line in page_text.splitlines() if line.strip().lower().startswith(("fig.", "figure", "şekil"))]
+            captions = [
+                line.strip()
+                for line in page_text.splitlines()
+                if re.match(r"^(?:Fig(?:\.|ure)?|Figure|Table|Şekil|Tablo)\s*[\d\.\:\-]", line.strip(), re.IGNORECASE)
+                or line.strip().lower().startswith(("fig.", "figure", "şekil", "table"))
+            ]
 
             for img_idx, img_info in enumerate(image_list):
                 xref = img_info[0]
@@ -54,14 +62,14 @@ def extract_figures(pdf_path: str, document_id: str) -> list[ExtractedFigure]:
                 if not image_bytes:
                     continue
 
-                # Çok küçük ikonları (örn. 80x80 altı) filtrele
+                # Çok küçük ikonları (örn. 100x100 altı) filtrele
                 width = base_image.get("width", 0)
                 height = base_image.get("height", 0)
-                if width < 120 or height < 120:
+                if width < 100 or height < 100:
                     continue
 
                 # Uygun caption eşleştir
-                caption = captions[img_idx] if img_idx < len(captions) else f"Şekil (Sayfa {page_num})"
+                caption = captions[img_idx] if img_idx < len(captions) else f"Şekil {img_idx + 1} (Sayfa {page_num})"
                 fig_type = _heuristic_figure_type(caption)
 
                 fig_id = str(uuid4())
