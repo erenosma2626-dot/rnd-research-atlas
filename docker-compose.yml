@@ -4,15 +4,15 @@ services:
     container_name: rnd_paper_canvas_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: rnd_paper_canvas
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: ${POSTGRES_DB:-rnd_paper_canvas}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d rnd_paper_canvas"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-rnd_paper_canvas}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,8 +23,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: devadmin
-      MINIO_ROOT_PASSWORD: devpassword123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-devadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-devpassword123}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -35,6 +35,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: rnd_paper_canvas_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set localminio http://minio:9000 ${MINIO_ROOT_USER:-devadmin} ${MINIO_ROOT_PASSWORD:-devpassword123};
+      /usr/bin/mc mb localminio/papercanvas-documents 2>/dev/null || true;
+      /usr/bin/mc anonymous set download localminio/papercanvas-documents 2>/dev/null || true;
+      exit 0;
+      "
 
   redis:
     image: redis:7-alpine
@@ -61,8 +75,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:devpassword@postgres:5432/rnd_paper_canvas
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/${POSTGRES_DB:-rnd_paper_canvas}
       MINIO_ENDPOINT: minio:9000
+      MINIO_SECURE: "false"
       REDIS_URL: redis://redis:6379/0
       CHROMA_PERSIST_DIRECTORY: /app/chroma_data
     depends_on:
@@ -86,8 +101,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:devpassword@postgres:5432/rnd_paper_canvas
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/${POSTGRES_DB:-rnd_paper_canvas}
       MINIO_ENDPOINT: minio:9000
+      MINIO_SECURE: "false"
       REDIS_URL: redis://redis:6379/0
       CHROMA_PERSIST_DIRECTORY: /app/chroma_data
     depends_on:
@@ -104,7 +120,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: rnd_paper_canvas_frontend
     restart: unless-stopped
     ports:

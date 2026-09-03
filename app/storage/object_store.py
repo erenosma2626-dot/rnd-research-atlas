@@ -38,7 +38,7 @@ def get_storage_config() -> dict[str, str]:
         "endpoint_url": endpoint_url,
         "access_key": os.getenv("MINIO_ACCESS_KEY", "devadmin"),
         "secret_key": os.getenv("MINIO_SECRET_KEY", "devpassword123"),
-        "bucket": os.getenv("MINIO_BUCKET", "documents"),
+        "bucket": os.getenv("MINIO_BUCKET", "papercanvas-documents"),
         "public_url": "",
         "region_name": "us-east-1",
     }

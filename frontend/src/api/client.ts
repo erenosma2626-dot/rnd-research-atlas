@@ -1,6 +1,11 @@
 import { supabase } from '../auth/supabaseClient';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+const envBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+const API_BASE_URL = envBaseUrl !== undefined && envBaseUrl !== ''
+  ? envBaseUrl
+  : typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? ''
+  : 'http://localhost:8000';
 
 export const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000002';
 

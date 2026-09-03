@@ -14,7 +14,9 @@ client = TestClient(app)
 
 @pytest.fixture
 def mock_db_session():
-    return AsyncMock()
+    session = AsyncMock()
+    session.add = MagicMock()
+    return session
 
 
 def test_upload_document_async_endpoint(mock_db_session):
