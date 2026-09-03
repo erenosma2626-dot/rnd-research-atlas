@@ -57,3 +57,4 @@ chroma_data/
 # Understand Anything Analysis Data
 .ua/
 .understand-anything/
+.agents/

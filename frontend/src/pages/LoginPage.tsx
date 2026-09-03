@@ -82,7 +82,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
   return (
     <div className="min-h-screen w-full flex bg-white dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white transition-colors duration-200 font-sans overflow-hidden">
       {/* 1. SOL KOLON: Giriş / Kayıt Kartı (~%22-25) */}
-      <div className="w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 flex flex-col justify-between p-6 sm:p-8 bg-white dark:bg-[#0A0A0A] border-r border-black/[0.06] dark:border-white/[0.08] z-20 shadow-sm relative">
+      <div className="w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col justify-between p-8 sm:p-10 bg-white dark:bg-[#0A0A0A] border-r border-black/[0.06] dark:border-white/[0.08] z-20 shadow-sm relative">
         {/* Top Header: Logo & Theme Switch */}
         <div className="flex items-center justify-between mb-8">
           <span
@@ -125,7 +125,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                     Giriş Yap
                   </h1>
                   <p className="text-xs text-black/50 dark:text-white/50 mt-1.5 leading-relaxed">
-                    Araştırma çalışma alanınıza ve projelerinize erişin.
+                    Uzamsal araştırma masanıza devam edin.
                   </p>
                 </div>
 
@@ -146,7 +146,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="ornek@alanadi.com"
                       required
-                      className="w-full px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30 text-[#0A0A0A] dark:text-white transition-colors"
+                      className="w-full px-4 py-3 rounded-xl text-sm bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.1] dark:border-white/[0.12] outline-none focus:border-black/50 dark:focus:border-white/50 focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 text-[#0A0A0A] dark:text-white transition-all"
                     />
                   </div>
 
@@ -160,14 +160,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30 text-[#0A0A0A] dark:text-white transition-colors"
+                      className="w-full px-4 py-3 rounded-xl text-sm bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.1] dark:border-white/[0.12] outline-none focus:border-black/50 dark:focus:border-white/50 focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 text-[#0A0A0A] dark:text-white transition-all"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2.5 px-5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-xs disabled:opacity-50 mt-2"
+                    className="w-full py-3 px-5 rounded-xl text-sm font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 active:scale-[0.99] transition-all shadow-xs disabled:opacity-50 mt-2"
                   >
                     {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                   </button>
@@ -197,7 +197,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                     Hesap Oluştur
                   </h1>
                   <p className="text-xs text-black/50 dark:text-white/50 mt-1.5 leading-relaxed">
-                    Akademik araştırma atlasınızı hemen başlatın.
+                    Makaleleriniz için yeni bir düşünce haritası açın.
                   </p>
                 </div>
 
@@ -224,7 +224,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="ornek@alanadi.com"
                       required
-                      className="w-full px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30 text-[#0A0A0A] dark:text-white transition-colors"
+                      className="w-full px-4 py-3 rounded-xl text-sm bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.1] dark:border-white/[0.12] outline-none focus:border-black/50 dark:focus:border-white/50 focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 text-[#0A0A0A] dark:text-white transition-all"
                     />
                   </div>
 
@@ -238,7 +238,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30 text-[#0A0A0A] dark:text-white transition-colors"
+                      className="w-full px-4 py-3 rounded-xl text-sm bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.1] dark:border-white/[0.12] outline-none focus:border-black/50 dark:focus:border-white/50 focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 text-[#0A0A0A] dark:text-white transition-all"
                     />
                   </div>
 
@@ -252,14 +252,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="w-full px-4 py-2.5 rounded-full text-xs bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.12] outline-none focus:border-black/30 dark:focus:border-white/30 text-[#0A0A0A] dark:text-white transition-colors"
+                      className="w-full px-4 py-3 rounded-xl text-sm bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.1] dark:border-white/[0.12] outline-none focus:border-black/50 dark:focus:border-white/50 focus:ring-1 focus:ring-black/20 dark:focus:ring-white/20 text-[#0A0A0A] dark:text-white transition-all"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2.5 px-5 rounded-full text-xs font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 transition-all shadow-xs disabled:opacity-50 mt-1"
+                    className="w-full py-3 px-5 rounded-xl text-sm font-medium text-white bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] hover:opacity-90 active:scale-[0.99] transition-all shadow-xs disabled:opacity-50 mt-2"
                   >
                     {loading ? 'Kayıt Olunuyor...' : 'Kayıt Ol'}
                   </button>
@@ -296,10 +296,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateHome }) => {
 
       {/* 2. SAĞ ALAN: 3D Yüzen Cisim Kümesi (~%78) */}
       <div className="hidden lg:block flex-1 h-screen relative bg-black/[0.02] dark:bg-[#0A0A0A]">
-        {/* Subtle decorative text in background */}
-        <div className="absolute top-8 right-10 text-[11px] font-mono text-black/30 dark:text-white/30 tracking-wider pointer-events-none select-none z-10">
-          SPATIAL KNOWLEDGE ATLAS
-        </div>
+
 
         {/* 3D Canvas Scene */}
         <FloatingShapesScene isDark={isDark} />

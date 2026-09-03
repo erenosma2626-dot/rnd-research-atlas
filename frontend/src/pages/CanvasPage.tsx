@@ -14,6 +14,8 @@ import ReactFlow, {
   ReactFlowProvider,
   useReactFlow,
   SelectionMode,
+  ConnectionMode,
+  ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -32,6 +34,7 @@ import {
   updateCanvasItem,
 } from '../api/client';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
+import { EdgeRelationshipPopover, EdgeColor } from '../components/canvas/EdgeRelationshipPopover';
 import { DocumentBoxNode, DocumentBoxNodeData } from '../components/canvas/DocumentBoxNode';
 import { DrawingNode } from '../components/canvas/DrawingNode';
 import { InventoryPanel } from '../components/canvas/InventoryPanel';
@@ -52,6 +55,14 @@ interface CanvasPageProps {
   onSelectDocument: (documentId: string) => void;
 }
 
+const getEdgeColors = (isDark: boolean): Record<string, { stroke: string; labelBg: string }> => ({
+  neutral: { stroke: isDark ? "#71717A" : "#A1A1AA", labelBg: isDark ? "#27272A" : "#F4F4F5" },
+  indigo: { stroke: "#6366F1", labelBg: isDark ? "rgba(99,102,241,0.25)" : "rgba(99,102,241,0.12)" },
+  emerald: { stroke: "#10B981", labelBg: isDark ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.12)" },
+  amber: { stroke: "#F59E0B", labelBg: isDark ? "rgba(245,158,11,0.25)" : "rgba(245,158,11,0.12)" },
+  rose: { stroke: "#F43F5E", labelBg: isDark ? "rgba(244,63,94,0.25)" : "rgba(244,63,94,0.12)" },
+});
+
 const CanvasContent: React.FC<CanvasPageProps> = ({
   canvasId: initialCanvasId,
   projectId = DEFAULT_PROJECT_ID,
@@ -66,6 +77,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
   const [canvases, setCanvases] = useState<CanvasSummary[]>([]);
   const [activeCanvasId, setActiveCanvasId] = useState<string>(initialCanvasId || '');
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [edgePopover, setEdgePopover] = useState<{ edge: Edge; position: { x: number; y: number } } | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [loading, setLoading] = useState(true);
@@ -425,19 +437,38 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
             },
           });
         } else if (item.item_type === 'connection' && item.content) {
+          const colorKey = item.content.color || 'neutral';
+          const colors = getEdgeColors(isDark);
+          const colorCfg = colors[colorKey] || colors.neutral;
           flowEdges.push({
             id: item.id,
             source: item.content.from_item_id,
             target: item.content.to_item_id,
+            sourceHandle: item.content.source_handle || undefined,
+            targetHandle: item.content.target_handle || undefined,
             label: item.content.label || undefined,
+            data: { color: colorKey },
+            type: 'smoothstep',
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: isDark ? '#FFFFFF' : '#0A0A0A',
+              color: colorCfg.stroke,
             },
             style: {
-              stroke: isDark ? '#52525B' : '#A1A1AA',
+              stroke: colorCfg.stroke,
               strokeWidth: 2,
             },
+            labelStyle: {
+              fill: isDark ? '#FFFFFF' : '#0A0A0A',
+              fontWeight: 600,
+              fontSize: 11,
+              fontFamily: 'monospace',
+            },
+            labelBgStyle: {
+              fill: colorCfg.labelBg,
+              fillOpacity: 0.95,
+            },
+            labelBgPadding: [6, 4],
+            labelBgBorderRadius: 6,
           });
         }
       }
@@ -517,7 +548,7 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     []
   );
 
-  // İki node arasına bağlantı çekildiğinde
+  // İki node arasına serbest bağlantı çekildiğinde
   const onConnect = useCallback(
     async (params: Connection) => {
       if (!params.source || !params.target) return;
@@ -532,20 +563,30 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
           {
             from_item_id: params.source,
             to_item_id: params.target,
+            source_handle: params.sourceHandle,
+            target_handle: params.targetHandle,
             label: null,
+            color: 'neutral',
           }
         );
+
+        const colors = getEdgeColors(isDark);
+        const colorCfg = colors.neutral;
 
         const newEdge: Edge = {
           id: newItem.id,
           source: params.source,
           target: params.target,
+          sourceHandle: params.sourceHandle,
+          targetHandle: params.targetHandle,
+          type: 'smoothstep',
+          data: { color: 'neutral' },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: isDark ? '#FFFFFF' : '#0A0A0A',
+            color: colorCfg.stroke,
           },
           style: {
-            stroke: isDark ? '#52525B' : '#A1A1AA',
+            stroke: colorCfg.stroke,
             strokeWidth: 2,
           },
         };
@@ -558,36 +599,76 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
     [activeCanvasId, isDark, setEdges]
   );
 
-  // Bağlantı çizgisine çift tıklanınca etiket düzenleme
+  // Bağlantı çizgisine çift tıklanınca kategori popover açma
   const onEdgeDoubleClick = useCallback(
-    async (_event: React.MouseEvent, edge: Edge) => {
-      const currentLabel = (typeof edge.label === 'string' ? edge.label : '') || '';
-      const newLabel = window.prompt('Bağlantı etiketi girin (boş bırakılırsa kaldırılır):', currentLabel);
-
-      if (newLabel === null) return;
-
-      try {
-        await updateCanvasItem(edge.id, {
-          content: {
-            from_item_id: edge.source,
-            to_item_id: edge.target,
-            label: newLabel.trim() ? newLabel.trim() : null,
-          },
-        });
-
-        setEdges((eds) =>
-          eds.map((e) =>
-            e.id === edge.id
-              ? { ...e, label: newLabel.trim() ? newLabel.trim() : undefined }
-              : e
-          )
-        );
-      } catch (err: any) {
-        alert(err.message || 'Etiket güncellenemedi.');
-      }
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setEdgePopover({
+        edge,
+        position: { x: event.clientX, y: event.clientY },
+      });
     },
-    [setEdges]
+    []
   );
+
+  const handleSelectEdgeLabel = async (label: string | null, color: EdgeColor) => {
+    if (!edgePopover) return;
+    const edge = edgePopover.edge;
+    setEdgePopover(null);
+
+    const colors = getEdgeColors(isDark);
+    const colorCfg = colors[color] || colors.neutral;
+
+    try {
+      await updateCanvasItem(edge.id, {
+        content: {
+          from_item_id: edge.source,
+          to_item_id: edge.target,
+          source_handle: edge.sourceHandle,
+          target_handle: edge.targetHandle,
+          label: label,
+          color: color,
+        },
+      });
+
+      setEdges((eds) =>
+        eds.map((e) =>
+          e.id === edge.id
+            ? {
+                ...e,
+                label: label || undefined,
+                data: { ...e.data, color },
+                type: 'smoothstep',
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  color: colorCfg.stroke,
+                },
+                style: {
+                  ...e.style,
+                  stroke: colorCfg.stroke,
+                  strokeWidth: 2,
+                },
+                labelStyle: {
+                  fill: isDark ? '#FFFFFF' : '#0A0A0A',
+                  fontWeight: 600,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                },
+                labelBgStyle: {
+                  fill: colorCfg.labelBg,
+                  fillOpacity: 0.95,
+                },
+                labelBgPadding: [6, 4] as [number, number],
+                labelBgBorderRadius: 6,
+              }
+            : e
+        )
+      );
+    } catch (err: any) {
+      alert(err.message || 'İlişki güncellenemedi.');
+    }
+  };
 
   // Toplu Düğüm ve Kenar Silme
   const onNodesDelete = useCallback(
@@ -946,6 +1027,9 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         multiSelectionKeyCode="Shift"
         nodesDraggable={toolMode === 'select' || toolMode === 'pan'}
         elementsSelectable={toolMode === 'select' || toolMode === 'pan'}
+        connectionMode={ConnectionMode.Loose}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        proOptions={{ hideAttribution: true }}
         className="w-full h-full"
       >
         <Background
@@ -956,19 +1040,23 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         />
         <Controls className="!bg-white dark:!bg-[#141414] !border-black/[0.08] dark:!border-white/[0.1] !shadow-sm !rounded-2xl overflow-hidden" />
         <MiniMap
-          className="!bg-white/80 dark:!bg-[#141414]/80 !border-black/[0.08] dark:!border-white/[0.1] !rounded-2xl overflow-hidden shadow-sm"
-          nodeColor={(n) =>
-            n.type === 'note' || n.type === 'sticky_note'
-              ? '#FBBF24'
-              : n.type === 'section_box'
-              ? '#6366F1'
-              : isDark
-              ? '#FFFFFF'
-              : '#0A0A0A'
-          }
-          maskColor={isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)'}
+          className="!bg-white/85 dark:!bg-[#141414]/85 backdrop-blur-md !border-black/[0.08] dark:!border-white/[0.1] !rounded-2xl overflow-hidden shadow-sm"
+          nodeColor={() => (isDark ? '#383838' : '#D4D4D8')}
+          nodeStrokeColor="transparent"
+          maskColor={isDark ? 'rgba(10, 10, 10, 0.75)' : 'rgba(255, 255, 255, 0.75)'}
         />
       </ReactFlow>
+
+      {/* Anlamsal İlişki Seçici Popover */}
+      {edgePopover && (
+        <EdgeRelationshipPopover
+          position={edgePopover.position}
+          currentLabel={(typeof edgePopover.edge.label === 'string' ? edgePopover.edge.label : '') || ''}
+          currentColor={(edgePopover.edge.data?.color as EdgeColor) || 'neutral'}
+          onSave={handleSelectEdgeLabel}
+          onClose={() => setEdgePopover(null)}
+        />
+      )}
 
       {/* Şekil Sürükle-Bırak Canlı Önizleme Katmanı */}
       {shapeDragStart && shapeDragCurrent && (

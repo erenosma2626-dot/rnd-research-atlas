@@ -63,11 +63,11 @@ export const ShapeNode: React.FC<NodeProps<ShapeNodeData>> = memo(({ data, selec
         </div>
       )}
 
-      {/* Target & Source Handles */}
-      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
-      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
+            {/* 4 Cardinal Multi-Directional Handles (Loose Mode) */}
+      <Handle id="top" type="source" position={Position.Top} className="!w-3.5 !h-3.5 !-top-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
+      <Handle id="right" type="source" position={Position.Right} className="!w-3.5 !h-3.5 !-right-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="!w-3.5 !h-3.5 !-bottom-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
+      <Handle id="left" type="source" position={Position.Left} className="!w-3.5 !h-3.5 !-left-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
 
       {/* Render SVG Geometry */}
       <div className="w-full h-full flex items-center justify-center pointer-events-auto">

@@ -90,10 +90,11 @@ export const StickyNoteNode: React.FC<NodeProps<StickyNoteNodeData>> = memo(({ d
         selected ? 'ring-2 ring-[#0A0A0A] dark:ring-white shadow-md' : ''
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
-      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-[#0A0A0A] dark:!bg-white" />
+            {/* 4 Cardinal Multi-Directional Handles (Loose Mode) */}
+      <Handle id="top" type="source" position={Position.Top} className="!w-3.5 !h-3.5 !-top-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
+      <Handle id="right" type="source" position={Position.Right} className="!w-3.5 !h-3.5 !-right-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="!w-3.5 !h-3.5 !-bottom-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
+      <Handle id="left" type="source" position={Position.Left} className="!w-3.5 !h-3.5 !-left-2 !bg-black dark:!bg-white !border-2 !border-white dark:!border-[#141414] !rounded-full transition-transform hover:scale-125 cursor-crosshair z-50 shadow-xs" />
 
       {/* Header & Color Picker */}
       <div className="flex items-center justify-between mb-2">

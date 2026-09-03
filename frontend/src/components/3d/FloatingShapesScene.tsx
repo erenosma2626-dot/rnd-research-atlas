@@ -2,19 +2,20 @@ import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// Single wireframe shape with independent floating and rotation physics
-interface SingleShapeProps {
+interface ResearchNodeProps {
   position: [number, number, number];
-  geometryType: 'icosahedron' | 'octahedron' | 'dodecahedron' | 'torus' | 'tetrahedron' | 'ring' | 'sphere' | 'box';
+  geometryType: 'icosahedron' | 'octahedron' | 'dodecahedron' | 'torus' | 'tetrahedron';
   size: number;
   rotationSpeed: [number, number, number];
   floatSpeed: number;
   floatAmplitude: number;
   phase: number;
   isDark: boolean;
+  onPositionUpdate?: (index: number, pos: THREE.Vector3) => void;
+  index: number;
 }
 
-const SingleShape: React.FC<SingleShapeProps> = ({
+const ResearchNode: React.FC<ResearchNodeProps> = ({
   position,
   geometryType,
   size,
@@ -23,65 +24,126 @@ const SingleShape: React.FC<SingleShapeProps> = ({
   floatAmplitude,
   phase,
   isDark,
+  onPositionUpdate,
+  index,
 }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const initialY = position[1];
+  const currentPos = useRef(new THREE.Vector3(...position));
 
   useFrame(({ clock }) => {
-    if (!meshRef.current) return;
+    if (!groupRef.current) return;
     const t = clock.getElapsedTime() + phase;
 
-    // Independent tumbling & rotation
-    meshRef.current.rotation.x += rotationSpeed[0];
-    meshRef.current.rotation.y += rotationSpeed[1];
-    meshRef.current.rotation.z += rotationSpeed[2];
+    // Gentle tumbling rotation
+    groupRef.current.rotation.x += rotationSpeed[0];
+    groupRef.current.rotation.y += rotationSpeed[1];
+    groupRef.current.rotation.z += rotationSpeed[2];
 
-    // Smooth sinusoidal floating
-    meshRef.current.position.y = initialY + Math.sin(t * floatSpeed) * floatAmplitude;
+    // Sinusoidal floating
+    const newY = initialY + Math.sin(t * floatSpeed) * floatAmplitude;
+    groupRef.current.position.y = newY;
+    currentPos.current.set(position[0], newY, position[2]);
+
+    if (onPositionUpdate) {
+      onPositionUpdate(index, currentPos.current);
+    }
   });
 
   const geometry = useMemo(() => {
     switch (geometryType) {
       case 'icosahedron':
-        return <icosahedronGeometry args={[size, 0]} />;
+        return new THREE.IcosahedronGeometry(size, 0);
       case 'octahedron':
-        return <octahedronGeometry args={[size, 0]} />;
+        return new THREE.OctahedronGeometry(size, 0);
       case 'dodecahedron':
-        return <dodecahedronGeometry args={[size, 0]} />;
+        return new THREE.DodecahedronGeometry(size, 0);
       case 'torus':
-        return <torusGeometry args={[size * 0.8, size * 0.25, 8, 16]} />;
+        return new THREE.TorusGeometry(size * 0.8, size * 0.2, 8, 16);
       case 'tetrahedron':
-        return <tetrahedronGeometry args={[size, 0]} />;
-      case 'ring':
-        return <ringGeometry args={[size * 0.5, size, 12]} />;
-      case 'sphere':
-        return <sphereGeometry args={[size, 10, 10]} />;
-      case 'box':
       default:
-        return <boxGeometry args={[size, size, size]} />;
+        return new THREE.TetrahedronGeometry(size, 0);
     }
   }, [geometryType, size]);
 
-  const lineColor = isDark ? '#FFFFFF' : '#0A0A0A';
+  const wireColor = isDark ? '#E5E7EB' : '#1F2937';
+  const coreColor = isDark ? '#6366F1' : '#4F46E5';
 
   return (
-    <mesh ref={meshRef} position={position}>
-      {geometry}
-      <meshBasicMaterial
-        wireframe
-        color={lineColor}
-        transparent
-        opacity={isDark ? 0.35 : 0.28}
-      />
-    </mesh>
+    <group ref={groupRef} position={position}>
+      {/* Outer Wireframe Cage */}
+      <mesh geometry={geometry}>
+        <meshBasicMaterial
+          wireframe
+          color={wireColor}
+          transparent
+          opacity={isDark ? 0.45 : 0.3}
+        />
+      </mesh>
+
+      {/* Inner Translucent Scientific Core (Gives body and depth) */}
+      <mesh geometry={geometry} scale={[0.65, 0.65, 0.65]}>
+        <meshStandardMaterial
+          color={coreColor}
+          transparent
+          opacity={isDark ? 0.18 : 0.12}
+          roughness={0.3}
+          metalness={0.2}
+        />
+      </mesh>
+
+      {/* Vertex Anchor Point */}
+      <mesh>
+        <sphereGeometry args={[size * 0.12, 8, 8]} />
+        <meshBasicMaterial
+          color={isDark ? '#34D399' : '#059669'}
+          transparent
+          opacity={isDark ? 0.7 : 0.5}
+        />
+      </mesh>
+    </group>
   );
 };
 
-// Interactive camera controller for gentle mouse parallax
+// Subtle ambient vector embedding dust
+const EmbeddingDust: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const points = useMemo(() => {
+    const coords = [];
+    for (let i = 0; i < 160; i++) {
+      coords.push(
+        (Math.random() - 0.5) * 18,
+        (Math.random() - 0.5) * 14,
+        (Math.random() - 0.5) * 8
+      );
+    }
+    return new Float32Array(coords);
+  }, []);
+
+  return (
+    <points>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={points.length / 3}
+          array={points}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.035}
+        color={isDark ? '#9CA3AF' : '#4B5563'}
+        transparent
+        opacity={isDark ? 0.35 : 0.25}
+      />
+    </points>
+  );
+};
+
+// Smooth mouse parallax camera rig
 const CameraRig: React.FC = () => {
   useFrame(({ camera, mouse }) => {
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, mouse.x * 1.2, 0.05);
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, mouse.y * 1.2, 0.05);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, mouse.x * 1.5, 0.04);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, mouse.y * 1.2, 0.04);
     camera.lookAt(0, 0, 0);
   });
   return null;
@@ -92,45 +154,38 @@ interface FloatingShapesSceneProps {
 }
 
 export const FloatingShapesScene: React.FC<FloatingShapesSceneProps> = ({ isDark = true }) => {
-  // Generate 24 distributed wireframe academic & geometric shapes
-  const shapes = useMemo(() => {
-    const types: SingleShapeProps['geometryType'][] = [
+  // 14 rich, carefully distributed topological nodes
+  const nodes = useMemo(() => {
+    const types: ResearchNodeProps['geometryType'][] = [
       'icosahedron',
       'octahedron',
       'dodecahedron',
       'torus',
       'tetrahedron',
-      'ring',
-      'sphere',
-      'box',
     ];
 
-    const items: Array<Omit<SingleShapeProps, 'isDark'>> = [];
-    const count = 24;
+    const items: Array<Omit<ResearchNodeProps, 'isDark' | 'onPositionUpdate' | 'index'>> = [];
+    const count = 16;
 
     for (let i = 0; i < count; i++) {
-      // Stratified grid distribution with random jitter
-      const row = Math.floor(i / 6);
-      const col = i % 6;
+      const col = i % 4;
+      const row = Math.floor(i / 4);
 
-      const posX = (col - 2.5) * 2.6 + (Math.random() - 0.5) * 0.9;
-      const posY = (row - 1.5) * 2.2 + (Math.random() - 0.5) * 0.8;
-      const posZ = (Math.random() - 0.5) * 3.5;
-
-      const geomType = types[i % types.length];
-      const size = 0.45 + Math.random() * 0.45;
+      const posX = (col - 1.5) * 2.8 + (Math.random() - 0.5) * 0.8;
+      const posY = (row - 1.5) * 2.4 + (Math.random() - 0.5) * 0.8;
+      const posZ = (Math.random() - 0.5) * 3;
 
       items.push({
         position: [posX, posY, posZ],
-        geometryType: geomType,
-        size,
+        geometryType: types[i % types.length],
+        size: 0.5 + Math.random() * 0.4,
         rotationSpeed: [
-          (Math.random() - 0.5) * 0.012,
-          (Math.random() - 0.5) * 0.015,
+          (Math.random() - 0.5) * 0.008,
           (Math.random() - 0.5) * 0.01,
+          (Math.random() - 0.5) * 0.007,
         ],
-        floatSpeed: 0.6 + Math.random() * 0.8,
-        floatAmplitude: 0.18 + Math.random() * 0.22,
+        floatSpeed: 0.5 + Math.random() * 0.6,
+        floatAmplitude: 0.16 + Math.random() * 0.18,
         phase: Math.random() * Math.PI * 2,
       });
     }
@@ -141,13 +196,21 @@ export const FloatingShapesScene: React.FC<FloatingShapesSceneProps> = ({ isDark
   return (
     <div className="w-full h-full relative overflow-hidden select-none pointer-events-auto">
       <Canvas
-        camera={{ position: [0, 0, 8.5], fov: 45 }}
+        camera={{ position: [0, 0, 9], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
       >
-        <ambientLight intensity={1} />
+        <ambientLight intensity={isDark ? 0.7 : 0.9} />
+        <directionalLight position={[10, 10, 5]} intensity={0.6} />
+        <directionalLight position={[-10, -10, -5]} intensity={0.3} color="#6366f1" />
         <CameraRig />
-        {shapes.map((shape, idx) => (
-          <SingleShape key={idx} {...shape} isDark={isDark} />
+        <EmbeddingDust isDark={isDark} />
+        {nodes.map((node, idx) => (
+          <ResearchNode
+            key={idx}
+            index={idx}
+            {...node}
+            isDark={isDark}
+          />
         ))}
       </Canvas>
     </div>

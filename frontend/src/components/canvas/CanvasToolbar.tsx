@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   Circle,
+  LayoutGrid,
+  FileText,
   Eraser,
   FilePlus,
   Hand,
@@ -121,12 +123,23 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       <header className="absolute top-4 left-6 right-6 z-20 flex items-center justify-between pointer-events-none gap-3">
         {/* Sol Alan: Projeye Dön & Canvas Sekmeleri */}
         <div className="flex items-center gap-2 bg-white/85 dark:bg-[#0A0A0A]/85 backdrop-blur-md p-1.5 rounded-full border border-black/[0.06] dark:border-white/[0.08] shadow-sm pointer-events-auto overflow-hidden">
-          <button
-            onClick={onNavigateHome}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-[#0A0A0A] dark:hover:text-white transition-colors flex-shrink-0"
-          >
-            &larr; Projeye Dön
-          </button>
+          <div className="flex items-center p-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] flex-shrink-0">
+            <button
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-white text-black dark:bg-[#222] dark:text-white font-semibold shadow-xs"
+              title="Uzamsal Tuval (Aktif)"
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-black dark:text-white" />
+              <span>Tuval</span>
+            </button>
+            <button
+              onClick={onNavigateHome}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors"
+              title="Makale Masasına Geç"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Makaleler</span>
+            </button>
+          </div>
 
           <div className="h-4 w-px bg-black/[0.08] dark:bg-white/[0.1] flex-shrink-0" />
 
@@ -149,7 +162,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
               toolMode === 'pan'
                 ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
-                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]'
             }`}
             title="Kaydırma ve Gezinme Modu (Kısayol: H veya Space basılı tut)"
           >
@@ -163,7 +176,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
               toolMode === 'select'
                 ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
-                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]'
             }`}
             title="Kutu ve Alan Seçim Modu (Kısayol: V)"
           >
@@ -171,13 +184,15 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             <span>Seç</span>
           </button>
 
+          <div className="h-4 w-px bg-black/[0.08] dark:bg-white/[0.1] mx-0.5" />
+
           {/* 3. Kalem Aracı */}
           <button
             onClick={() => setToolMode(toolMode === 'pen' ? 'select' : 'pen')}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
               toolMode === 'pen'
                 ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
-                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]'
             }`}
             title="Serbest Kalem Çizimi (Kısayol: P)"
           >
@@ -191,7 +206,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
               toolMode === 'eraser'
                 ? 'bg-rose-600 text-white shadow-xs'
-                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]'
             }`}
             title="Çizim Silgisi (Kısayol: E)"
           >
@@ -206,7 +221,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 toolMode === 'shape'
                   ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
-                  : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                  : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]'
               }`}
               title="Şekil Ekle (Tuvale tıklayarak yerleştirin)"
             >
@@ -221,25 +236,25 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               <div className="absolute top-full mt-2 left-0 w-36 bg-white dark:bg-[#141414] rounded-2xl border border-black/[0.08] dark:border-white/[0.1] shadow-xl p-1.5 z-30 space-y-0.5">
                 <button
                   onClick={() => handleSelectShape('rectangle')}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]"
                 >
                   <Square className="w-3.5 h-3.5" /> Dikdörtgen
                 </button>
                 <button
                   onClick={() => handleSelectShape('circle')}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]"
                 >
                   <Circle className="w-3.5 h-3.5" /> Daire
                 </button>
                 <button
                   onClick={() => handleSelectShape('arrow')}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]"
                 >
                   <ArrowRight className="w-3.5 h-3.5" /> Ok
                 </button>
                 <button
                   onClick={() => handleSelectShape('line')}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]"
                 >
                   <Minus className="w-3.5 h-3.5" /> Çizgi
                 </button>
@@ -253,7 +268,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
               toolMode === 'text'
                 ? 'bg-[#0A0A0A] text-white dark:bg-white dark:text-[#0A0A0A] shadow-xs'
-                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                : 'text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]'
             }`}
             title="Metin Kutusu (Kısayol: T - Tuvale tıklayarak ekleyin)"
           >
@@ -261,10 +276,12 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             <span>Metin</span>
           </button>
 
+          <div className="h-4 w-px bg-black/[0.08] dark:bg-white/[0.1] mx-0.5" />
+
           {/* 6. Not / Yapışkan Not Butonu */}
           <button
             onClick={onAddNoteToCanvas}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06] transition-colors"
             title="Seçili öğeye yapışık veya serbest not ekle"
           >
             <StickyNote className="w-3.5 h-3.5" />
@@ -274,7 +291,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           {/* 7. Manuel Bölüm Ekle Butonu */}
           <button
             onClick={() => setIsSectionModalOpen(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06] transition-colors"
             title="Yeni araştırma bölümü oluştur"
           >
             <FilePlus className="w-3.5 h-3.5" />
@@ -284,7 +301,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           {/* 8. Doküman Ekle Butonu */}
           <button
             onClick={handleOpenDocModal}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-black/70 dark:text-white/70 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06] transition-colors"
             title="Tuvale projeden doküman ekle"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -309,7 +326,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           {/* Theme Switch */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 rounded-full text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+            className="p-1.5 rounded-full text-black/60 dark:text-white/60 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06] transition-colors"
             title={isDark ? 'Açık Mod' : 'Koyu Mod'}
           >
             {isDark ? (
@@ -333,7 +350,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               <h3 className="font-serif text-base font-medium tracking-tight">Tuvale Doküman Ekle</h3>
               <button
                 onClick={() => setIsDocModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-black/50 dark:text-white/50"
+                className="p-1.5 rounded-full hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06] text-black/50 dark:text-white/50"
               >
                 &times;
               </button>
@@ -377,7 +394,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
               <h3 className="font-serif text-base font-medium tracking-tight">Yeni Bölüm Oluştur</h3>
               <button
                 onClick={() => setIsSectionModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-black/50 dark:text-white/50"
+                className="p-1.5 rounded-full hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06] text-black/50 dark:text-white/50"
               >
                 &times;
               </button>
@@ -429,7 +446,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsSectionModalOpen(false)}
-                  className="px-4 py-2 rounded-full text-xs text-black/60 dark:text-white/60 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  className="px-4 py-2 rounded-full text-xs text-black/60 dark:text-white/60 hover:bg-black/[0.04] active:scale-[0.96] dark:hover:bg-white/[0.06]"
                 >
                   İptal
                 </button>

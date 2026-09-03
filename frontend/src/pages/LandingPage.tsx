@@ -1,13 +1,8 @@
 import React from 'react';
+import { WorkflowNarrative } from '../components/landing/WorkflowNarrative';
 import {
   ArrowRight,
-  LayoutGrid,
-  ListChecks,
-  ScanSearch,
-  Sparkles,
-  Upload,
 } from 'lucide-react';
-import { BlockMath, InlineMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 import { Domain3DCanvas, DomainType } from '../components/3d/Domain3DCanvas';
 import { useTheme } from '../theme/ThemeContext';
@@ -124,9 +119,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
 
       {/* 1. HERO SECTION */}
       <section className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] text-xs text-black/70 dark:text-white/70 mb-8 font-medium">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Akademik Araştırma ve Sentez Atlası</span>
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.1] text-xs text-black/75 dark:text-white/80 mb-8 font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>[arXiv:1706.03762] · Uzamsal Araştırma & Düşünce Tezgâhı</span>
         </div>
 
         <h1 className="font-serif text-5xl sm:text-7xl font-medium tracking-tight text-[#0A0A0A] dark:text-white leading-[1.05] mb-6 max-w-3xl mx-auto">
@@ -145,60 +140,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
             <span>Başla</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-        </div>
-      </section>
-
-      {/* 5.A: SOMUT ÇIKTI ÖNİZLEMESİ (Hero Altı Mockup) */}
-      <section className="max-w-4xl mx-auto px-6 pb-20">
-        <div className="rounded-3xl border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#141414] shadow-[0_12px_40px_rgba(0,0,0,0.06)] overflow-hidden">
-          {/* Mockup Window Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-black/[0.05] dark:border-white/[0.07] bg-black/[0.02] dark:bg-white/[0.02]">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400/80" />
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-              <span className="ml-2 text-[11px] font-mono text-black/40 dark:text-white/40">
-                paper_analysis_report.pdf &rarr; Yapılandırılmış Çıktı
-              </span>
-            </div>
-            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium">
-              Analiz Tamamlandı
-            </span>
-          </div>
-
-          {/* Mockup Window Body */}
-          <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-2">
-              <div className="text-[10px] font-mono text-black/40 dark:text-white/40">BÖLÜM 01 · YÖNTEM</div>
-              <h4 className="font-serif text-sm font-semibold text-[#0A0A0A] dark:text-white">Çok Katmanlı Dikkat Mekanizması</h4>
-              <p className="text-[11px] text-black/60 dark:text-white/60 leading-relaxed">
-                Girdi dizileri <InlineMath math="Q, K, V" /> matrisleri üzerinden lineer projeksiyonla alt uzaylara ayrıştırılır.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-2">
-              <div className="text-[10px] font-mono text-black/40 dark:text-white/40">BÖLÜM 02 · FORMÜL & LATEX</div>
-              <h4 className="font-serif text-sm font-semibold text-[#0A0A0A] dark:text-white">Ölçekli Çarpım Fonksiyonu</h4>
-              <div className="text-[11px] p-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.05] text-black/90 dark:text-white/90 overflow-x-auto select-all flex items-center justify-center">
-                <BlockMath math="\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V" />
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.06] space-y-2">
-              <div className="text-[10px] font-mono text-black/40 dark:text-white/40">BÖLÜM 03 · BULGULAR & TABLO</div>
-              <h4 className="font-serif text-sm font-semibold text-[#0A0A0A] dark:text-white">Benchmark Başarımı</h4>
-              <div className="text-[11px] font-mono space-y-1">
-                <div className="flex justify-between py-0.5 border-b border-black/[0.05] dark:border-white/[0.06] text-black/50 dark:text-white/50">
-                  <span>Model</span>
-                  <span>BLEU</span>
-                </div>
-                <div className="flex justify-between py-0.5 text-black/80 dark:text-white/80 font-medium">
-                  <span>Önerilen Model</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">41.8</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -234,60 +175,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateLogin }) => 
         </div>
       </section>
 
-      {/* 3. SECTION B: Nasıl Çalışıyor (4 Adım) */}
-      <section className="max-w-5xl mx-auto px-6 py-20 border-t border-black/[0.05] dark:border-white/[0.08]">
-        <div className="text-center mb-14">
-          <h2 className="font-serif text-3xl sm:text-4xl font-medium tracking-tight text-[#0A0A0A] dark:text-white">
-            Nasıl çalışıyor
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <Upload className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
-            </div>
-            <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 01</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Makaleni yükle</h4>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              PDF'i sürükle-bırak, gerisini biz hallederiz.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <ScanSearch className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
-            </div>
-            <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 02</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Otomatik analiz</h4>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              Yöntem, bulgular, görseller ve tablolar tespit edilir.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <ListChecks className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
-            </div>
-            <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 03</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Planla ve onayla</h4>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              Rapora hangi bölümlerin gireceğine sen karar verirsin.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#141414] border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center mb-4">
-              <LayoutGrid className="w-4 h-4 text-[#0A0A0A] dark:text-white" />
-            </div>
-            <span className="text-[11px] font-mono text-black/40 dark:text-white/40">Adım 04</span>
-            <h4 className="font-medium text-sm text-[#0A0A0A] dark:text-white mt-1 mb-1.5">Canvas'ta organize et</h4>
-            <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed">
-              Bölümleri sürükle, notlar ekle, bağlantı kur.
-            </p>
-          </div>
-        </div>
-      </section>
+      <WorkflowNarrative />
 
       {/* 4. SECTION C: Disiplin Bazlı 3D Alan Tanıtımı */}
       <section className="max-w-5xl mx-auto px-6 py-20 border-t border-black/[0.05] dark:border-white/[0.08]">
