@@ -2,7 +2,7 @@
 
 **Okumadan önce, anlamak için.**
 
-PaperCanvas, akademik makaleleri ve araştırma dokümanlarını (Matematik, Makine Öğrenmesi, Yapay Zeka ve Veri Bilimi odaklı) otomatik olarak analiz eden, ortak yapıları ayrıştıran, matematiksel formülleri LaTeX formatına çeviren ve sonsuz bir görsel tuval üzerinde ekipçe sentezlemenizi sağlayan yeni nesil bir ArGe araştırma atlasıdır.
+PaperCanvas, akademik makaleleri ve araştırma dokümanlarını (Matematik, Makine Öğrenmesi, Yapay Zeka ve Veri Bilimi odaklı) otomatik olarak analiz eden, ortak yapıları ayrıştıran, matematiksel formülleri LaTeX formatına çeviren ve akıllı yönelimli sonsuz bir görsel tuval üzerinde ekipçe sentezlemenizi sağlayan yeni nesil bir ArGe araştırma atlasıdır.
 
 ![PaperCanvas Ana Sayfa](screenshots/anasayfa1.png)
 
@@ -25,11 +25,18 @@ Sonuç olarak: Makalenin kendi görselleri, tabloları, matematiksel notasyonu v
 | Adım | Başlık | Açıklama |
 |---|---|---|
 | 01 | Makaleni Yükle | PDF dosyasını sürükleyip bırakın, asenkron analiz kuyruğu otomatik başlasın. |
-| 02 | Otomatik Analiz | Yöntem, bulgular, matematiksel formüller, görsel ve tablolar tespit edilir. |
-| 03 | Planla ve Onayla | Rapora hangi bölümlerin gireceğine, sırasına ve diyagramlara karar verin. |
-| 04 | Canvas'ta Organize Et | Bölümleri ve dokümanları tuvale sürükleyin, notlar ekleyin ve ilişkiler kurun. |
+| 02 | Otomatik Analiz | Yöntem, bulgular, matematiksel formüller (KaTeX), görsel ve tablolar AST tabanlı tespit edilir. |
+| 03 | Planla ve Onayla | Rapora hangi bölümlerin gireceğine, sırasına ve diyagramlara interaktif kontrol paneliyle karar verin. |
+| 04 | Canvas'ta Organize Et | Bölümleri ve dokümanları tuvale sürükleyin, serbest yönelimli notlar ekleyin ve anlamsal ilişkiler kurun. |
 
-![Nasıl Çalışır](screenshots/anasayfa3.png)
+### Adım 01 & 02: Optik Katmanlama ve Otomatik Semantik Analiz
+![Nasıl Çalışır - Adım 1 ve 2](screenshots/anasayfa3a.png)
+
+### Adım 03: İnteraktif Planlama ve Onay
+![Nasıl Çalışır - Adım 3](screenshots/anasayfa3b.png)
+
+### Adım 04: İnteraktif Zihin Tuvali
+![Nasıl Çalışır - Adım 4](screenshots/anasayfa4.png)
 
 ---
 
@@ -57,53 +64,58 @@ PaperCanvas, farklı bilimsel disiplinlerin kendine has makale yapılarına gör
 - İstatistiksel değerlendirme metriklerini tablolara dönüştürür.
 - Sayısal sonuç ve kıyaslama özetleri sunar.
 
-![Disiplinler](screenshots/anasayfa4.png)
+![Disiplinler](screenshots/anasayfa5.png)
 
 ---
 
 ## Ekran Görüntüleri ve Arayüz Galerisi
 
-### 1. Giriş ve Kimlik Doğrulama
-Supabase JWT entegrasyonu ile güvenli, oturum bazlı çalışma alanı izolasyonu.
+### 1. Giriş ve 3D Düşünce Sahnesi
+Supabase JWT entegrasyonu ile güvenli oturum açma, editoryal form tasarımı ve arka planda fare hareketine duyarlı çift katmanlı 3D topolojik araştırma düğümleri.
 
 ![Giriş Sayfası](screenshots/loginpage.png)
 
-### 2. Projeler ve Araştırma Alanları
-Çok kullanıcılı ekip çalışma alanları, rol bazlı yetkilendirme ve üye yönetimi.
+### 2. Araştırma Atölyeleri (Çalışma Alanları)
+Çok kullanıcılı ekip çalışma sahaları, rol bazlı yetkilendirme (`Sahip` / `Editör` / `İzleyici`), anlık atölye durumu ve tek tıkla doğrudan tuvale geçiş.
 
 ![Proje Listesi](screenshots/projects.png)
 
-### 3. Doküman Envanteri ve Yükleme
-PDF yükleme, arka plan işlem durumu takibi ve ortak doküman kütüphanesi.
+### 3. Makale Masası & Adaptif Semantik Kartlar
+- **Merkezi Çalışma Alanı Seçicisi:** `[ 🗺️ Uzamsal Tuval (Canvas) ] ⇄ [ 📑 Makale Masası ]` geçişi.
+- **Esnek Çıkarım Vitrini:** Dosya adı karmaşası yerine temiz editoryal başlıklar; makalenin türüne göre otomatik KaTeX çekirdek formülü, SOTA kıyaslama rozeti veya semantik AST bölümleme gösterimi.
+- **Doğrudan Aksiyon:** Makaleyi raporda açma veya tuvaldeki konumuna tek tıkla odaklanma.
 
 ![Doküman Yönetimi](screenshots/documents.png)
 
-### 4. Yapılandırılmış Rapor ve LaTeX Görünümü
-Docling ayrıştırması, KaTeX matematiksel dizgisi ve etkileşimli içerik kartları.
+### 4. Akıllı Yönelimli Sonsuz Tuval (Spatial Canvas)
+- **Akıllı Yönelimli Bağlantı İpleri (`SmartOrientedEdge`):** İpin hedefi başlangıcın yatay hizasından yukarıdaysa varış açısı ve oku otomatik olarak **YUKARI (↑)**; aşağıdaysa **AŞAĞI (↓)** döner.
+- **Serbest 4-Yönlü Bağlantı:** Kutuların 4 ana kenarındaki (Üst, Sağ, Alt, Sol) noktalardan serbestçe ip çıkarma ve bağlama (`ConnectionMode.Loose`).
+- **Kategorize İlişki Menüsü & Renk Paleti:** Çizgiye çift tıklandığında açılan ML & Mimari, Bilimsel ve Mantıksal ilişki etiketleri ile 5 renkli (Nötr, İndigo, Zümrüt, Kehribar, Gül) ip paleti.
+- **Monokrom Radar Haritası & Yüzen Araç Adaları:** Navigasyon, serbest çizim ve içerik düğümlerine ayrılmış modern araç çubuğu.
+
+![Görsel Canvas](screenshots/canvas.png)
+
+### 5. Yapılandırılmış Rapor ve LaTeX Görünümü
+Docling ayrıştırması, KaTeX matematiksel dizgisi, etkileşimli içerik kartları ve analiz hiyerarşisi.
 
 ![Rapor Görünümü 1](screenshots/reports1.png)
 ![Rapor Görünümü 2](screenshots/reports2.png)
 ![Rapor Görünümü 3](screenshots/reports3.png)
 ![Rapor Görünümü 4](screenshots/reports4.png)
 
-### 5. RAG Destekli Araştırma Asistanı (Chatbot)
-Vektör indeksli doküman üzerinde kaynak sayfa referanslı, halüsinasyon korumalı soru-cevap.
+### 6. RAG Destekli Araştırma Asistanı (Chatbot)
+Vektör indeksli doküman üzerinde kaynak sayfa referanslı, halüsinasyon korumalı soru-cevap asistanı.
 
 ![Chatbot](screenshots/chatbot.png)
 
-### 6. Sonsuz Canvas Çalışma Alanı
-React Flow tabanlı, doküman kutucukları, rapor bölümleri, notlar ve yönlü ilişkiler içeren görsel sentez tuvali.
-
-![Görsel Canvas](screenshots/canvas.png)
-
 ---
 
-## Proje Geliştirme Adımları ve Fazlar
+## Proje Geliştirme Fazları ve Mimari Adımları
 
 <details>
-<summary><b>Faz 1: Analiz Motoru ve Web Arayüzü (Adım 1 - 9)</b></summary>
+<summary><b>Faz 1: Çekirdek Analiz Pipeline ve Raporlama (Adım 1 - 9)</b></summary>
 
-- **Adım 1 - Docling Parser:** PDF dokümanlarını layout-aware olarak ayrıştırarak bölümler (sections), başlık seviyeleri, sayfa aralıkları ve matematiksel formülleri yapılandırılmış JSON çıktısına dönüştürür.
+- **Adım 1 - Docling ile İskelet Ayrıştırma:** Docling parser ile PDF belgelerinden hiyerarşik yapı (başlıklar, paragraflar, tablolar, formüller ve görseller) çıkarılır.
 - **Adım 2 - PaperProfile Sınıflandırıcısı:** Düşük token maliyetiyle doküman iskeletini tek seferlik LLM çağrısıyla analiz ederek 17 bağımsız içerik bayrağı, birincil araştırma alanı (primary_domain) ve güven skoru çıkarır.
 - **Adım 3 - Section Routing ve ChromaDB:** PaperProfile bayraklarına göre makale için üretilecek aktif rapor bölüm gruplarını belirler ve bölüm sınırlarını koruyarak dokümanı yerel ChromaDB vektör uzayına indeksler.
 - **Adım 4 - Slot Doldurma ve Rapor Üretimi:** Her aktif bölüm grubu için ChromaDB'den semantik parçaları çeker ve structured output ile tipine uygun (prose, table, list) zengin rapor içeriğini kaynak sayfa referanslarıyla üretir.

@@ -43,6 +43,8 @@ import { SectionBoxNode, SectionBoxNodeData } from '../components/canvas/Section
 import { ShapeNode } from '../components/canvas/ShapeNode';
 import { StickyNoteNode, StickyNoteNodeData } from '../components/canvas/StickyNoteNode';
 import { TextNode } from '../components/canvas/TextNode';
+import { SmartOrientedEdge } from '../components/canvas/SmartOrientedEdge';
+import { SmartConnectionLine } from '../components/canvas/SmartConnectionLine';
 import { ToolMode, ToolModeProvider, useToolMode } from '../components/canvas/ToolModeContext';
 import { useCanvasDrawing } from '../hooks/canvas/useCanvasDrawing';
 import { useCanvasShortcuts } from '../hooks/canvas/useCanvasShortcuts';
@@ -293,6 +295,15 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
       drawing: DrawingNode,
       shape: ShapeNode,
       text: TextNode,
+    }),
+    []
+  );
+
+  // Custom Edge Tipleri (Akıllı Yönelimli Bağlantı İpleri)
+  const edgeTypes = useMemo(
+    () => ({
+      smoothstep: SmartOrientedEdge,
+      default: SmartOrientedEdge,
     }),
     []
   );
@@ -1019,6 +1030,8 @@ const CanvasContent: React.FC<CanvasPageProps> = ({
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionLineComponent={SmartConnectionLine}
         fitView
         // Pan & Select Ayrımı
         panOnDrag={toolMode === 'pan' ? [0, 1, 2] : [1, 2]}
